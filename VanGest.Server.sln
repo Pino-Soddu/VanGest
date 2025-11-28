@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35303.130
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VanGest.Server", "VanGest.Server\VanGest.Server.csproj", "{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Debug|x86.ActiveCfg = Debug|x86
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Debug|x86.Build.0 = Debug|x86
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Release|x86.ActiveCfg = Release|x86
+		{E4C8C6D7-9A7E-4E6F-936C-C2B2B942271D}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {162A3CBD-5745-4225-AD9C-57D483DD15EB}
+	EndGlobalSection
+EndGlobal

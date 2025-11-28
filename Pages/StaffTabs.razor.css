@@ -1,0 +1,156 @@
+﻿/* Container principale */
+.staff-tabs {
+    margin-top: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Intestazione superiore con logo e titolo */
+.staff-header-wrapper {
+    background-color: #f7f9fc;
+    border-bottom: 1px solid #e2e8f0; /* Sostituisce #ddd con un grigio più chiaro */
+    padding: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03); /* Ombra morbida */
+    position: relative;
+}
+
+    .staff-header-wrapper::after {
+        content: "";
+        display: block;
+        height: 1px;
+        background: #0066cc; /* Colore aziendale (modificabile) */
+        width: 100%;
+        position: absolute;
+        bottom: -1px; /* Allinea al bordo inferiore */
+        left: 0;
+        opacity: 0.9; /* Leggera trasparenza */
+        transition: opacity 0.2s ease; /* Effetto hover */
+    }
+
+    .staff-header-wrapper:hover::after {
+        opacity: 1;
+        background: #005bb7; /* Colore più intenso al hover */
+    }
+
+.staff-header-content {
+    display: flex;
+    align-items: center;
+    height: 85px; /* Altezza fissa (regolabile) */
+    margin: 0; /* Rimuove margini esterni */
+    padding: 0; /* Spaziatura laterale interna (senza padding verticale) */
+}
+
+/* ------ Logo ------ */
+.staff-logo-compact {
+    height: 80px;
+    width: auto;
+    object-fit: contain;
+    margin: 0;
+    padding: 0;
+}
+
+/* ------ Testo ------ */
+.staff-title-compact {
+    font-size: 1.6rem; /* Ridotto da 1.2rem */
+    font-weight: 600;  /* Più leggero (era 600) */
+    color: #2c58a0;    /* Stesso colore della homepage */
+    letter-spacing: 0.03em; /* Raffinatura tipografica */
+    margin-left: 2.5rem; /* Spaziatura più stretta */
+    font-family: 'Segoe UI', system-ui, sans-serif; /* Mantiene coerenza */
+}
+
+/* Tab header */
+.tab-header {
+    display: flex;
+    justify-content: flex-start;
+    background-color: #e9eef5;
+    padding: 0.5rem;
+    border-bottom: 1px solid #ccc;
+    gap: 0.5rem;
+}
+
+    .tab-header button {
+        background: none;
+        border: none;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #555;
+        border-radius: 4px;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+        .tab-header button:hover {
+            background-color: #dce6f1;
+        }
+
+        .tab-header button.active {
+            background-color: #0066cc;
+            color: white;
+        }
+
+/* Contenuto dei tab */
+.tab-body {
+    padding: 0,2rem;
+}
+
+/* Layout contenitore principale */
+.filters-grid-container {
+    display: flex;
+    height: calc(100vh - 180px); /* Adatta all'altezza della tua header */
+    padding-right: 0 !important; /* Forza l'eliminazione */
+    margin-right: 0 !important; /* Di ogni spazio destro */
+}
+
+/* Colonna Griglia */
+.grid-column {
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+    .grid-column.inactive {
+        width: 80%;
+        opacity: 0.5;
+        pointer-events: none; /* Disabilita interazioni */
+        background: rgba(255, 255, 255, 0.7);
+    }
+
+/* Colonna Filtri */
+.filters-column {
+    width: 20%;
+    border-left: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+/* Messaggio griglia vuota */
+.empty-grid-message {
+    padding: 2rem;
+    text-align: center;
+    color: #64748b;
+}
+
+/* Sovrapposizione ibrida filtri-griglia */
+.filters-grid-container {
+    position: relative;
+}
+
+.grid-column.inactive {
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.filters-column {
+    position: absolute;
+    right: 0;
+    width: 20%;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    z-index: 100;
+    transition: transform 0.3s ease;
+}

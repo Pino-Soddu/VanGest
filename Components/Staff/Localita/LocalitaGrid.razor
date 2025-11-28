@@ -1,0 +1,574 @@
+﻿@namespace VanGest.Server.Components.Staff.Localita
+@using VanGest.Server.Models
+@using System.Text.Json
+@using VanGest.Server.Components
+@using System.Text.Json.Serialization
+@inject GeocodingService GeocodingService
+@inject NavigationManager NavigationManager
+@inject ILocalitaDataManager Service
+@inject IJSRuntime JSRuntime
+@inject IJSRuntime JS
+
+
+<div class="compact-grid">
+    <!-- Header della griglia -->
+    <div class="grid-header">
+        <div class="header-main">
+            <span class="result-count">@($"Risultati: {FilteredLocalita?.Count ?? 0}")</span>
+        </div>
+
+        <div class="header-actions">
+            <button class="icon-btn export-btn" @onclick="ExportToExcel" title="Esporta in Excel">
+                <img src="/icons/excel-48.svg" alt="Esporta" class="icon" />
+            </button>
+            <button class="icon-btn map-btn" @onclick="ToggleMapOverlay" title="Visualizza mappa">
+                <img src="/icons/map-geo.svg" alt="Mappa" class="icon" />
+            </button>
+            <button class="icon-btn refresh-btn" @onclick="RefreshData" title="Ricarica dati">
+                <img src="/icons/refresh.svg" alt="Ricarica" class="icon" />
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Controllo filtri / ricerca -->
+    <div class="grid-controls">
+        <div class="filter-group">
+            <input type="text" placeholder="Cerca per Località o Indirizzo o Comune..." @bind="@searchTerm" />
+            <button @onclick="ApplyFilter">Filtra</button>
+            <button @onclick="SalvaTutteModificheConConferma"
+            disabled="@(dirtyFields.Count == 0)"
+            class="btn-save">
+                💾 Aggiorna
+            </button>
+        </div>
+        <!-- Altri evetuali elementi della header -->
+    </div>
+
+    <!-- Tabella dati -->
+    <div class="grid-scroll-container">
+        <table class="data-grid">
+            <!-- Colgroup per definire le larghezze -->
+            <colgroup>
+                <col style="width: 80px" />    <!-- ID -->
+                <col style="width: 170px" />   <!-- Nome Località -->
+                <col style="width: 210px" />   <!-- Indirizzo -->
+                <col style="width: 170px" />   <!-- Comune -->
+                <col style="width: 100px" />   <!-- Latitudine -->
+                <col style="width: 100px" />   <!-- Longitudine -->
+                <col style="width: 150px" />   <!-- Responsabile -->
+                <col style="width: 120px" />   <!-- Telefono -->
+                <col style="width: 180px" />   <!-- Email -->
+                <col style="width: 150px" />   <!-- Note -->
+                <col style="width: 70px" />    <!-- Azioni -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome Località</th>
+                    <th>Indirizzo</th>
+                    <th>Comune</th>
+                    <th>Latitudine</th>
+                    <th>Longitudine</th>
+                    <th>Responsabile</th>
+                    <th>Telefono</th>
+                    <th>Email</th>
+                    <th>Note</th>
+                    <th></th> <!-- Azioni (Elimina) -->
+                </tr>
+            </thead>
+            <tbody>
+                @if (FilteredLocalita != null)
+                {
+                    foreach (var item in FilteredLocalita)
+                    {
+                        <tr class="@(item.Latitudine == 0 && item.Longitudine == 0 ? "no-coordinates" : "")">
+
+                            <td>@item.IdLocalita</td>
+
+                            <!-- Nome Località (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.NomeLocalita))">
+                                @if (editingItem == item && editingField == nameof(item.NomeLocalita))
+                                {
+                                    <input 
+                                        @bind="item.NomeLocalita"
+                                        @oninput="() => MarkAsDirty(item, nameof(item.NomeLocalita))"
+                                        @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.NomeLocalita)) ? "dirty-cell" : "")">
+                                        @item.NomeLocalita
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Indirizzo (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.Indirizzo))">
+                                @if (editingItem == item && editingField == nameof(item.Indirizzo))
+                                {
+                                    <input @bind="item.Indirizzo"
+                                           @bind:event="oninput"
+                                           @onkeydown="@(async e => {
+                                                if (e.Key == "Enter")
+                                                {
+                                                    await Task.Yield();
+                                                    await HandleAddressEdit(item, nameof(item.Indirizzo)).ConfigureAwait(false);
+                                                    EndEdit();
+                                                }
+                                            })"
+                                            @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.Indirizzo)) ? "dirty-cell" : "")">
+                                        @item.Indirizzo
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Comune (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.Comune))">
+                                @if (editingItem == item && editingField == nameof(item.Comune))
+                                {
+                                    <input @bind="item.Comune"
+                                           @onkeydown="@(async e => {
+                                                if (e.Key == "Enter")
+                                                {
+                                                    await HandleAddressEdit(item, nameof(item.Indirizzo)).ConfigureAwait(false);
+                                                    EndEdit();
+                                                }
+                                            })"
+                                           @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.Comune)) ? "dirty-cell" : "")">
+                                        @item.Comune
+                                    </span>
+                                }
+                            </td>
+							
+                            <!-- Le celle applicano la classe dirty-cell quando le coordinate sono modificate via drag -->
+                            <!-- Cella Latitudine -->
+                            <td class="@(IsDirty(item, nameof(item.Latitudine)) ? "dirty-cell" : "")
+                                @(item.Latitudine == 0 ? "no-coordinates" : "coordinate-cell")"
+                                @onclick="@(() => HandleMapClick(item))">
+                                @item.Latitudine.ToString("0.######")
+                            </td>
+
+                            <!-- Cella Longitudine -->
+                            <td class="@(IsDirty(item, nameof(item.Longitudine)) ? "dirty-cell" : "")
+                                @(item.Longitudine == 0 ? "no-coordinates" : "coordinate-cell")"
+                                @onclick="@(() => HandleMapClick(item))">
+                                @item.Longitudine.ToString("0.######")
+                            </td>
+
+                            <!-- NomeResponsabile (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.NomeResponsabile))">
+                                @if (editingItem == item && editingField == nameof(item.NomeResponsabile))
+                                {
+                                    <input
+                                        @bind="item.NomeResponsabile"
+                                        @oninput="() => MarkAsDirty(item, nameof(item.NomeResponsabile))"
+                                        @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.NomeResponsabile)) ? "dirty-cell" : "")">
+                                        @item.NomeResponsabile
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- TelefonoResponsabile (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.TelefonoResponsabile))">
+                                @if (editingItem == item && editingField == nameof(item.TelefonoResponsabile))
+                                {
+                                    <input 
+                                        @bind="item.TelefonoResponsabile"
+                                        @oninput="() => MarkAsDirty(item, nameof(item.TelefonoResponsabile))"
+                                        @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.TelefonoResponsabile)) ? "dirty-cell" : "")">
+                                        @item.TelefonoResponsabile
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- EmailResponsabile (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.EmailResponsabile))">
+                                @if (editingItem == item && editingField == nameof(item.EmailResponsabile))
+                                {
+                                    <input 
+                                        @bind="item.EmailResponsabile"
+                                        @oninput="() => MarkAsDirty(item, nameof(item.EmailResponsabile))"
+                                        @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.EmailResponsabile)) ? "dirty-cell" : "")">
+                                        @item.EmailResponsabile
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Note (editabile) -->
+                            <td @onclick="() => StartEdit(item, nameof(item.Note))">
+                                @if (editingItem == item && editingField == nameof(item.Note))
+                                {
+                                    <input
+                                        @bind="item.Note"
+                                        @oninput="() => MarkAsDirty(item, nameof(item.Note))"
+                                        @onblur="EndEdit" />
+                                }
+                                else
+                                {
+                                    <span class="@(IsDirty(item, nameof(item.Note)) ? "dirty-cell" : "")">
+                                        @item.Note
+                                    </span>
+                                }
+                            </td>
+
+                            <td style="text-align:center;">
+                                <!-- Bottone elimina -->
+                                <button class="delete-btn" @onclick="@(() => DeleteItem(item.IdLocalita))" title="Elimina">🗑️</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            
+            </tbody>
+        </table>
+    </div>
+
+    <div class="toast-container">
+        @if (showToast)
+        {
+            <div class="toast-message @toastAnimation">
+                <span>📍 Posizione aggiornata in griglia!</span>
+            </div>
+        }
+    </div>
+
+    @if (showMapOverlay)
+    {
+        <MappaOverlayOSM Localita="FilteredLocalita"
+                      OnMarkerUpdated="HandleMarkerUpdate"
+                      OnCloseRequested="() => showMapOverlay = false" />
+    }
+    
+    
+    @if (isGeocoding)
+    {
+        <div class="geocoding-status">
+            <span>Ricerca posizione in corso...</span>
+        </div>
+    }
+
+
+    @if (showGeocodingError)
+    {
+        <div class="toast-error">
+            <span>Errore: Il Comune è obbligatorio</span>
+            <button @onclick="() => showGeocodingError = false">×</button>
+        </div>
+    }
+
+
+    <!-- Eventuali altri controlli come paginazione possono essere aggiunti qui -->
+
+</div>
+
+
+
+@code {
+    private List<Localita>? LocalitaList;
+    private List<Localita>? FilteredLocalita;
+    private string searchTerm = "";
+    private bool showMapOverlay = false;
+    private bool showToast = false;
+    private bool isGeocoding = false;
+    private bool showGeocodingError = false;
+    private string toastAnimation = "";
+
+    // Variabili per gestire l'editing
+    private Localita? editingItem = null;
+    private string? editingField = null;
+    private HashSet<(Localita Item, string FieldName)> dirtyFields = new();
+
+    // Metodo per avviare la modifica
+    private void StartEdit(Localita item, string fieldName)
+    {
+        editingItem = item;
+        editingField = fieldName;
+    }
+
+    // Segna il campo come modificato
+    private void MarkAsDirty(Localita item, string fieldName)
+    {
+        dirtyFields.Add((item, fieldName));
+        StateHasChanged();
+    }
+
+    // Verifica se un campo è stato modificato
+    private bool IsDirty(Localita item, string fieldName)
+    {
+        return dirtyFields.Contains((item, fieldName));
+    }
+
+    private void EndEdit()
+    {
+        editingItem = null;
+        editingField = null;
+        // Non chiama StateHasChanged() qui per evitare flickering
+    }
+
+    private async Task SalvaTutteModificheConConferma()
+    {
+        if (dirtyFields.Count == 0) return;
+
+        bool conferma = await JSRuntime.InvokeAsync<bool>("confirm",
+            new object[] { "Confermi il salvataggio di tutte le modifiche?" });
+
+        if (!conferma) return;
+
+        foreach (var (item, _) in dirtyFields.ToList())
+        {
+            await Service.UpdateLocalitaAsync(item);
+        }
+
+        dirtyFields.Clear();
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            // Carica i dati dal backend tramite il servizio
+            LocalitaList = await Service.GetLocalitaAsync();
+            FilteredLocalita = LocalitaList;
+        }
+        catch (Exception ex)
+        {
+            // Gestisci eventuali errori, ad esempio log o messaggi all'utente
+            Console.Error.WriteLine($"Errore caricamento dati: {ex.Message}");
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            FilteredLocalita = LocalitaList;
+        }
+        else
+        {
+            var term = searchTerm.ToLower();
+            FilteredLocalita = LocalitaList?.Where(l =>
+                l.NomeLocalita.ToLower().Contains(term) ||
+                l.Indirizzo.ToLower().Contains(term) ||
+                l.Comune.ToLower().Contains(term) ||
+                l.NomeResponsabile.ToLower().Contains(term) ||
+                l.EmailResponsabile.ToLower().Contains(term) ||
+                l.TelefonoResponsabile.ToLower().Contains(term)
+            ).ToList();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        bool conferma = await JSRuntime.InvokeAsync<bool>("confirm",
+            new object[] { "Confermi la cancellazione?" });
+
+        if (!conferma) return;
+
+        try
+        {
+            await Service.DeleteLocalitaAsync(id);
+            await LoadData();
+            ApplyFilter();
+            await RefreshData();
+        }
+        catch (Exception ex)
+        {
+            // Gestisci errore, ad esempio mostra un messaggio all'utente
+            Console.Error.WriteLine($"Errore durante la cancellazione: {ex.Message}");
+        }
+    }
+
+    private void ToggleMapOverlay()
+    {
+        showMapOverlay = !showMapOverlay;
+    }
+
+    private void ExportToExcel()
+    {
+        // Implementa la logica di esportazione se necessario
+    }
+
+    private List<Localita> GetLocalitaPerMappa()
+    {
+        return FilteredLocalita?
+            .Where(l => l.Latitudine != 0 && l.Longitudine != 0)
+            .ToList() ?? new List<Localita>();
+    }
+
+    private async Task HandleMarkerDragEnd(Localita updatedLocalita)
+    {
+        // 1. Trova e aggiorna la località
+        var localita = FilteredLocalita?.FirstOrDefault(l => l.IdLocalita == updatedLocalita.IdLocalita);
+        if (localita != null)
+        {
+            // 2. Marca i campi come modificati
+            dirtyFields.Add((localita, nameof(Localita.Latitudine)));
+            dirtyFields.Add((localita, nameof(Localita.Longitudine)));
+
+            // 3. Forza il re-render
+            await InvokeAsync(StateHasChanged);
+        }
+
+        // 4. Chiudi l'overlay (opzionale)
+        showMapOverlay = false;
+    }
+
+    private async Task HandleMarkerUpdate(Localita updatedLocalita)
+    {
+        var localita = FilteredLocalita?.FirstOrDefault(l => l.IdLocalita == updatedLocalita.IdLocalita);
+        if (localita != null)
+        {
+            dirtyFields.Add((localita, nameof(Localita.Latitudine)));
+            dirtyFields.Add((localita, nameof(Localita.Longitudine)));
+        }
+        // 2. Mostra la notifica (nuovo codice)
+        await ShowToastNotification();
+    }
+
+    private async Task ShowToastNotification()
+    {
+        showToast = true;
+        toastAnimation = "show";
+        StateHasChanged();
+
+        await Task.Delay(2000); // Mostra per 2 secondi
+
+        toastAnimation = "hide";
+        StateHasChanged();
+
+        await Task.Delay(300); // Attendi l'animazione
+        showToast = false;
+        StateHasChanged();
+    }
+
+    // Metodo di Geocodifica Indirizzo  e Comune
+    private async Task HandleAddressEdit(Localita item, string fieldName)
+    {
+        MarkAsDirty(item, nameof(item.Indirizzo));
+
+        if (!string.IsNullOrWhiteSpace(item.Comune))
+        {
+            isGeocoding = true;
+            StateHasChanged();
+
+            try
+            {
+                var coordinates = await GeocodingService.GetCoordinatesAsync(item.Indirizzo, item.Comune);
+
+                if (coordinates.HasValue)
+                {
+                    item.Latitudine = (decimal)coordinates.Value.Lat;
+                    item.Longitudine = (decimal)coordinates.Value.Lon;
+
+                    MarkAsDirty(item, nameof(item.Latitudine));
+                    MarkAsDirty(item, nameof(item.Longitudine));
+
+                    if (showMapOverlay)
+                    {
+                        await JS.InvokeVoidAsync("vanGest.centerMapOnMarker", item.IdLocalita, 16);
+                    }
+                    else
+                    {
+                        showMapOverlay = true;
+                        await Task.Delay(50); // Attendi il rendering
+                        await JS.InvokeVoidAsync("vanGest.centerMapOnMarker", item.IdLocalita, 16);
+                    }
+                }
+            }
+            finally
+            {
+                isGeocoding = false;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            showGeocodingError = true;
+            StateHasChanged();
+        }
+
+    }
+
+    // Metodo di Attivazione della mappa al click sulle coordinate
+    // Attiva la mappa con centratura SOLO se:
+    // 1. Non siamo in modalità editing (controllo sicurezza)
+    // 2. È un campo territoriale (Indirizzo/Comune/NomeLocalità)
+    // 3. La località ha coordinate
+    private async Task HandleMapClick(Localita item)
+    {
+         // 1. Chiudi e riapri la mappa per forzare reinizializzazione
+        showMapOverlay = false;
+        await Task.Delay(30); // Breve pausa per garantire lo smontaggio
+    
+        showMapOverlay = true;
+        await Task.Delay(100); // Pausa per il rendering completo
+
+        // 2. Resetta sempre lo stato di editing prima di gestire il click
+        editingItem = null;
+        editingField = null;
+
+        // 3. Forza un refresh per uscire dalla modalità edit
+        StateHasChanged();
+        await Task.Yield(); // Permette al render di completarsi
+
+        // 4. Gestione mappa
+        if (item.Latitudine != 0 && item.Longitudine != 0)
+        {
+            // Approccio toggle garantito
+            var originalState = showMapOverlay;
+            showMapOverlay = false;
+
+            await Task.Delay(30); // Tempo minimo per unmount
+
+            showMapOverlay = true;
+            await Task.Delay(100); // Tempo per render completo
+
+            try
+            {
+                await JS.InvokeVoidAsync("vanGest.centerMapOnMarker",
+                                      item.IdLocalita,
+                                      16);
+            }
+            catch
+            {
+                // Fallback garantito
+                showMapOverlay = false;
+                showMapOverlay = true;
+            }
+        }
+    }
+}

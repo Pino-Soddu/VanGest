@@ -1,0 +1,47 @@
+﻿.google-maps-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.map-filter-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+    .map-filter-button:hover {
+        transform: scale(1.05);
+    }
+
+    .map-filter-button img {
+        width: 24px;
+        height: 24px;
+        display: block;
+    }
+
+
+.tooltip-body {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+    .tooltip-body p {
+        margin: 2px 0;
+        white-space: nowrap;
+    }
+
+    .tooltip-body strong {
+        display: inline-block;
+        min-width: 60px;
+        color: #555;
+    }

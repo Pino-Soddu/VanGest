@@ -1,0 +1,563 @@
+﻿/* =========== CONTENITORE PRINCIPALE =========== */
+.advanced-filter-container {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-height: 100%;
+    padding: 0 2px;
+    margin: 0 auto;
+    position: relative;
+    overflow-y: auto; /* Nuovo */
+}
+
+@media (max-width: 780px) {
+    .advanced-filter-container {
+        padding: 0 5px;
+    }
+}
+
+/* =========== CATEGORIE VERTICALI =========== */
+.categorie-verticali {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+    height: 90vh;
+    max-height: 800px;
+    overflow-y: auto;
+    margin-left: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding-bottom: 60px; /* Spazio per la barra azioni */
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Ridotto da 8px */
+}
+
+/* Versione compatta */
+.categorie-verticali {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #ddd transparent;
+}
+
+/* =========== CATEGORIA SINGOLA =========== */
+.categoria-verticale {
+    border: 1px solid #e1e4e8;
+    border-bottom: 1px solid #e2e8f0; /* Unificato */
+    border-radius: 6px;
+    padding: 0;
+}
+
+.categoria-espansa {
+    background-color: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+}
+
+/* =========== INTESTAZIONE CATEGORIA =========== */
+.intestazione-verticale {
+    display: flex;
+    justify-content: space-between; /* Distribuisce gli elementi */
+    align-items: center; /* Allineamento verticale */
+    padding: 0 4px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e1e4e8;
+    width: 94%; /* Occupa tutta la larghezza del genitore */
+    gap: 0px; /* Spazio uniforme tra gli elementi */
+
+}
+
+    .intestazione-verticale h4 {
+        flex: 1; /* Occupa tutto lo spazio rimanente */
+        padding: 0 0px; /* Spaziatura laterale */
+        max-width: 62%; /* Rimuovi il limite */
+        margin-left: 2px; /* Piccolo spazio fisso dopo l'icona */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* [...] se il testo è troppo lungo */
+        text-align: left;
+        font-weight: 500; /* Ridotto da 600 */
+        color: #334155; /* Grigio scuro */
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+/* =========== CAMPI FILTRI =========== */
+.campi-verticali {
+    padding: 4px 8px; /* Ridotto */
+}
+
+.campo-verticale {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) minmax(140px, 1.2fr) 24px;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 0; /* Ridotto */
+    min-height: 32px;
+    margin-bottom: 2px;
+}
+
+.campo-input-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 2px;
+}
+
+.campo-input-verticale {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .campo-input-verticale label {
+        min-width: 120px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .campo-input-verticale input {
+        width: 100%;
+        min-width: 280px; /* Nuovo: larghezza minima garantita */
+        max-width: 300px; /* Nuovo: limite massimo (opzionale) */
+        padding: 2px 2px;
+        font-size: 0.82rem;
+    }
+
+.campo-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+/* =========== CAMPI FILTRATI =========== */
+.campo-filtrato {
+    background-color: #E6F7FF !important;
+    border-left: 3px solid #1890FF !important;
+    padding-left: 5px;
+    margin-left: -5px;
+    transition: all 0.3s ease;
+}
+
+    .campo-filtrato label {
+        font-weight: 600;
+    }
+
+    .campo-filtrato input:focus {
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+
+/* =========== MOSTRA TUTTI =========== */
+.mostra-tutti {
+    flex: 0 0 auto; /* Adatta alla larghezza del contenuto */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: green; /*#57606a;*/
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.05);
+    margin-left: 0;
+    transition: all 0.2s;
+}
+
+    .mostra-tutti:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+
+.mostra-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    font-size: 1.2rem;
+    line-height: 24px;
+}
+
+/* =========== LOADING =========== */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255,255,255,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========== RESPONSIVE =========== */
+@media (max-width: 1300px) {
+    .categorie-verticali {
+        width: 100%;
+        max-width: 40vw;
+    }
+
+    .campo-verticale {
+        grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .categorie-verticali {
+        width: 100%;
+        max-width: none;
+        max-height: 300px;
+        margin: 10px 0;
+    }
+}
+
+/* =========== CORREZIONE ALLINEAMENTO CAMPI =========== */
+.campo-verticale {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) minmax(150px, 1.5fr) 30px;
+    gap: 1px;
+    align-items: center; /* Allineamento verticale centrale */
+    padding: 0px 0;
+    min-height: 36px;
+}
+
+/* Contenitore input + label */
+.campo-input-container {
+    grid-column: 1 / 3; /* Occupa le prime due colonne */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0; /* Fix per overflow */
+    align-items: flex-start;
+}
+
+/* Label */
+.campo-input-verticale label {
+    flex: 0 0 140px; /* Larghezza fissa */
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Input */
+.campo-input-verticale input {
+    flex: 1;
+    min-width: 0; /* Permette lo shrinking */
+    padding: 6px 8px;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+}
+
+/* Checkbox */
+.campo-checkbox {
+    grid-column: 3; /* Terza colonna */
+    justify-self: end; /* Allineamento a destra */
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+@media (max-width: 1200px) {
+    .campo-verticale {
+        grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) 24px;
+    }
+
+    .campo-input-verticale label {
+        flex-basis: 110px;
+    }
+}
+
+@media (max-width: 768px) {
+    .campo-verticale {
+        grid-template-columns: 1fr 24px; /* Stack verticale */
+    }
+
+    .campo-input-container {
+        grid-column: 1;
+    }
+
+    .campo-checkbox {
+        grid-column: 2;
+        align-self: center;
+    }
+}
+
+
+.overlay-header {
+    /*background-color: var(--header-bg);*/
+    background: #c4d8f5;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 8px 8px 0 0; /* Arrotonda solo gli angoli superiori */
+    border: 1px solid #0066cc !important;
+}
+
+.overlay-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748; /* Grigio scuro */
+    margin: 0;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: #64748b; /* Grigio medio */
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+    .btn-close:hover {
+        background-color: var(--header-accent);
+        color: #0066cc; /* Blu aziendale */
+    }
+
+    .btn-close:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.campo-data-disabilitato {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #ced4da;
+    cursor: not-allowed;
+}
+.toggle-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #0066cc; /* Colore personalizzato */
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+    .toggle-icon span {
+        display: block;
+        line-height: 1;
+        margin-top: -2px; /* Allineamento verticale perfetto */
+    }
+
+.intestazione-verticale:hover .toggle-icon {
+    color: #004080; /* Colore hover */
+    transform: scale(1.1); /* Leggera animazione */
+}
+
+
+
+/* BARRA AZIONI INFERIORE */
+.filter-actions-bar {
+    position: sticky;
+    bottom: 0;
+    background: #f8f9fa;
+    padding: 8px 16px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+    .filter-actions-bar button {
+        flex: 1;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+        /* Pulsante Azzera */
+        .filter-actions-bar button:first-child {
+            background: white;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Pulsante Cerca */
+        .filter-actions-bar button:last-child {
+            background: #0066cc;
+            color: white;
+            border: 1px solid #0066cc;
+        }
+
+        /* Effetti hover */
+        .filter-actions-bar button:first-child:hover {
+            background: #f1f5f9;
+        }
+
+        .filter-actions-bar button:last-child:hover {
+            background: #0052a3;
+            border-color: #0052a3;
+        }
+
+.toggle-control {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+    .toggle-control.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.toggle-input {
+    display: none;
+}
+
+.toggle-indicator {
+    font-size: 1.2rem;
+    user-select: none;
+    color: #495057;
+}
+
+    .toggle-indicator:hover:not(.disabled) {
+        color: #0d6efd;
+    }
+
+/* Allineamento toggle a sinistra */
+.toggle-control {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Spaziatura tra icona e testo */
+    cursor: pointer;
+}
+
+.toggle-indicator {
+    order: -1; /* Icona prima del testo */
+    margin-right: 8px;
+    font-size: 1.2rem;
+    user-select: none;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+}
+
+/* Stile dropdown TipoSosta */
+.campo-input-verticale select {
+    width: 100%;
+    padding: 0.25rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    font-size: 0.85rem;
+}
+
+
+
+/* Stile base per il container del campo */
+.campo-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+/* Stato DISABILITATO (quando EsisteSuTrack=false) */
+select:disabled {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Icona di avviso (tooltip) */
+.campo-avviso {
+    color: #6c757d;
+    cursor: help;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+    .campo-avviso:hover {
+        color: #0d6efd; /* Blu di Bootstrap */
+    }
+
+/* Stato ATTIVO (quando EsisteSuTrack=true) */
+.campo-input-verticale.campo-filtrato {
+    border-left: 3px solid #0d6efd; /* Bordo blu a sinistra */
+    padding-left: 8px;
+}
+
+/* Stile per la combo attiva */
+select:not(:disabled) {
+    border-color: #adb5bd;
+    transition: border-color 0.3s;
+}
+
+    select:not(:disabled):focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+/* Tooltip personalizzato */
+[data-tooltip] {
+    position: relative;
+}
+
+    [data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+
+    [data-tooltip]:hover::after {
+        opacity: 1;
+    }

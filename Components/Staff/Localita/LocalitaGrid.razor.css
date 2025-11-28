@@ -1,0 +1,362 @@
+﻿/* Layout principale */
+.container {
+    display: flex;
+    height: 100vh; /* altezza totale viewport */
+}
+
+/* Stile del componente CompactGrid */
+.compact-grid {
+    border-radius: 8px;
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: white;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 20px); /* per adattarsi allo spazio disponibile */
+}
+
+/* Intestazione controlli */
+.grid-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+    /* Nuovo stile per il gruppo input+pulsante */
+    .grid-controls .filter-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-grow: 1;
+        max-width: 600px; /* regola secondo necessità */
+    }
+
+    .grid-controls input[type="text"] {
+        padding: 6px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        flex-grow: 1;
+    }
+
+    .grid-controls button {
+        padding: 6px 12px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+        .grid-controls button:hover {
+            background-color: #0069d9;
+        }
+
+.result-count {
+    width: auto;
+    font-weight: 500;
+    color: #495057;
+    font-size: 1.2rem;
+}
+
+.grid-actions button {
+    background: none;
+    border: none;
+    cursor: pointer; /* corretto senza transition sbagliato */
+    font-size: 1.1rem;
+}
+
+/* Scroll container della griglia */
+.grid-scroll-container {
+    overflow-x: auto;
+    flex-grow: 1; /* occupa tutto lo spazio rimanente verticalmente */
+    transform: translateZ(0);
+    isolation: isolate;
+}
+
+.grid-body {
+    height: auto; /* si adatta all'altezza disponibile */
+    overflow-y: auto; /* scrollbar verticale se necessario */
+}
+
+/* Personalizzazione scrollbar Webkit (optional) */
+.grid-scroll-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.grid-scroll-container::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+
+/* Tabella dati */
+.data-grid {
+    width: auto; /* si adatta alla larghezza del contenitore */
+    border-collapse: collapse;
+    table-layout: auto; /* permette di ridimensionare le colonne dinamicamente */
+    font-size: .9rem;
+}
+
+    .data-grid thead th {
+        position: sticky;
+        top: -1px;
+        background-color: #e9ecef;
+        z-index: 10;
+    }
+
+    .data-grid th {
+        position: sticky;
+        top: -1px;
+        background-color: #e9ecef;
+        padding: .5rem 1rem;
+        text-align: left;
+        font-weight: bold;
+    }
+
+    .data-grid td {
+        padding: .2rem .75rem;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: top;
+    }
+
+/* Correzioni specifiche per gli avvisi */
+
+.cell-content {
+    white-space: nowrap; /* errore originale, corretto in nowrap senza trattino*/
+    overflow: hidden; /* meglio usare overflow invece di hidden con ellipsis se non serve ellipsis*/
+    text-overflow: ellipsis; /* correttamente senza spazi o errori di sintassi*/
+    width: 100%;
+    display: block;
+}
+
+/* Pulsante delete con hover corretto e senza transition sbagliato */
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #e53e3e;
+    font-size: 1.2em;
+    padding: 0 .5em;
+    cursor: pointer; /* rimosso transition sbagliato che causava errore*/
+}
+
+    .delete-btn:hover {
+        color: #c53030;
+    }
+
+/* Header della griglia */
+.grid-header {
+    position: sticky;
+    top: -1px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .75rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.header-main {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+}
+
+.filter-display {
+    margin-left: .5em;
+    color: #555;
+    font-size: .9em;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.filter-summary {
+    background: #e6f7ff;
+    padding: .25em .5em;
+    border-radius: .3em;
+    border-left: .25em solid #1890ff;
+    font-size: .75em;
+    margin-left: .5em;
+}
+
+.export-btn {
+    color: #2e7d32 !important;
+    background: none;
+    border: none;
+    font-size: .9em;
+    padding: .25em .5em;
+    margin-left: .5em;
+    text-align: center;
+    text-decoration: none;
+}
+
+    .export-btn:hover {
+        color: #0d4d12;
+    }
+
+.data-grid tr.no-coordinates {
+    background-color: rgba(255, 200, 200, 0.3); /* Rosso tenue con trasparenza */
+}
+
+    .data-grid tr.no-coordinates:hover {
+        background-color: rgba(255, 180, 180, 0.4); /* Leggermente più intenso al hover */
+    }
+
+.dirty-cell {
+    background-color: rgba(144, 238, 144, 0.8); /* Lightgreen con trasparenza */
+}
+
+/* Stile per gli input in modalità edit */
+.compact-grid input {
+    border: 1px solid #ddd;
+    padding: 2px 5px;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: white !important;
+}
+
+.btn-save {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    margin-left: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+    .btn-save:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+
+.toast-container {
+    position: fixed;
+    /* Posizione in alto al centro, sopra la mappa */
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000; /* Più alto della mappa (z-index: 1000) */
+    width: max-content;
+    max-width: 90%;
+}
+
+.toast-message {
+    background: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* Animazione migliorata */
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+    .toast-message.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .toast-message.hide {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+/* Aggiungi in LocalitaGrid.razor.css */
+.geocoding-status {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    z-index: 1000;
+}
+
+
+/* Evidenziazione hover per celle coordinate */
+td.coordinate-cell:hover {
+    background-color: #c1f8f5; /* Celeste chiarissimo */
+    cursor: pointer; /* Manina */
+    transition: background-color 0.2s ease;
+}
+
+/* Mantieni lo stese esistente per celle senza coordinate */
+td.no-coordinates:hover {
+    background-color: inherit; /* Nessun cambiamento */
+    cursor: default;
+}
+
+
+/* Stile base per tutti i pulsanti icona */
+.icon-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0 8px;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+    .icon-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+/* Icone SVG */
+.icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Colori specifici per ogni azione */
+.export-btn .icon {
+    filter: invert(28%) sepia(98%) saturate(1518%) hue-rotate(87deg) brightness(98%) contrast(91%);
+    /* Verde simile al colore originale 📥 */
+}
+
+.map-btn .icon {
+    filter: invert(24%) sepia(99%) saturate(7488%) hue-rotate(235deg) brightness(91%) contrast(91%);
+    /* Blu scuro simile a 🗺️ */
+}
+
+.refresh-btn .icon {
+    filter: invert(44%) sepia(99%) saturate(1623%) hue-rotate(176deg) brightness(98%) contrast(91%);
+    /* Azzurro simile a 🔄 */
+}
+
+
+/* Celle coordinate - Hover */
+.data-grid td[onclick]:hover {
+    cursor: pointer; /* Manina al passaggio del mouse */
+    background-color: #f0f8ff; /* Celeste chiaro per feedback visivo */
+}
+
+/* Celle senza coordinate - Hover (disabilita cursore) */
+.data-grid td.no-coordinates:hover {
+    cursor: default !important; /* Freccia normale */
+    background-color: inherit !important; /* Mantieni colore originale */
+}
+

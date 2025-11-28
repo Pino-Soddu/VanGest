@@ -1,0 +1,199 @@
+/* map-style.css - Stile completamente personalizzato per tooltip Google Maps */
+
+/* ================================================ */
+/* RESET STILI PRE-DEFINITI GOOGLE MAPS */
+/* ================================================ */
+.gm-style .gm-style-iw-c {
+    padding: 0 !important;
+    border-radius: 6px !important;
+    max-width: 250px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.gm-style .gm-style-iw-d {
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+.gm-ui-hover-effect {
+    display: none !important; /* Rimuove completamente l'icona di chiusura */
+}
+
+/* ================================================ */
+/* STILE PERSONALIZZATO DEL TOOLTIP */
+/* ================================================ */
+.custom-tooltip {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: white;
+    color: #333;
+    padding: 6px 8px;
+    border-radius: 6px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    line-height: 1.4;
+}
+
+/* Header - Linea compatta */
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.targa {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    letter-spacing: 0.3px;
+}
+
+/* Badge stato - Ultra-compatto */
+.status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #2c3e50;
+    color: white;
+    margin-left: 6px;
+}
+
+/* Corpo - Allineamento ottimizzato */
+.tooltip-body {
+    font-size: 0.85rem;
+}
+
+    .tooltip-body p {
+        display: flex;
+        margin: 4px 0;
+    }
+
+    .tooltip-body strong {
+        color: #666;
+        font-weight: 500;
+        min-width: 50px;
+        display: inline-block;
+    }
+
+/* Footer - Testo secondario */
+.tooltip-footer {
+    margin-top: 4px;
+    padding-top: 4px;
+    font-size: 0.7rem;
+    color: #888;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* ================================================ */
+/* VARIANTI DI COLORE PER STATO (OPZIONALE) */
+/* ================================================ */
+.status-badge.M {
+    background: #3498db;
+}
+/* Manutenzione */
+.status-badge.F {
+    background: #e74c3c;
+}
+/* Fuori servizio */
+.status-badge.S {
+    background: #2ecc71;
+}
+/* Stand-by */
+.status-badge.P {
+    background: #f39c12;
+}
+/* Prenotato */
+
+
+
+/* map-style.css - Modifiche mirate per evidenziare TipoSosta e datafine */
+
+/* ====================== */
+/* 1. EVIDENZIA TIPOSOSTA */
+/* ====================== */
+.status-badge.M {
+    background: #27ae60 !important; /* Verde vibrante */
+    border-color: #219955 !important;
+    box-shadow: 0 1px 3px rgba(39, 174, 96, 0.3) !important;
+}
+
+.status-badge.F,
+.status-badge.S,
+.status-badge.P {
+    background: #3498db !important; /* Blu standard */
+    border-color: #2980b9 !important;
+    box-shadow: 0 1px 3px rgba(52, 152, 219, 0.3) !important;
+}
+
+/* Effetto hover per tutti i badge */
+.status-badge:hover {
+    filter: brightness(110%) !important;
+}
+
+    /* Colori vibranti per stati */
+    .status-badge.M {
+        background: #3498db;
+        color: white;
+        border-color: #2980b9;
+    }
+
+    .status-badge.F {
+        background: #e74c3c;
+        color: white;
+        border-color: #c0392b;
+    }
+
+    .status-badge.S {
+        background: #27ae60;
+        color: white;
+        border-color: #219955;
+    }
+
+    .status-badge.P {
+        background: #f39c12;
+        color: white;
+        border-color: #e67e22;
+    }
+
+/* ======================== */
+/* 2. EVIDENZIA DATAFINE */
+/* ======================== */
+.tooltip-footer {
+    background: #f8f9fa; /* Sfondo grigio chiaro */
+    padding: 5px 8px !important;
+    margin: 6px -8px -6px -8px !important; /* Esteso ai bordi */
+    border-radius: 0 0 5px 5px !important; /* Arrotondamento solo in basso */
+    font-weight: 600 !important;
+    color: #555 !important;
+    border-top: 1px solid #e0e0e0 !important;
+    font-size: 0.75rem !important;
+    text-align: center; /* Allineamento centrale */
+}
+
+    /* Stile per la data di fine */
+    .tooltip-footer .datafine {
+        color: #d35400; /* Colore arancione acceso */
+        font-weight: 700;
+        display: inline-block;
+        padding: 1px 4px;
+        background: #fff3e8;
+        border-radius: 3px;
+        white-space: nowrap; /* Impedisce l'andata a capo */
+        display: inline-block;
+        margin-left: 4px;
+    }
+
+/* ======================== */
+/* ADATTAMENTO LAYOUT */
+/* ======================== */
+.tooltip-header {
+    align-items: flex-start; /* Allineamento in alto */
+    padding-bottom: 6px; /* Più spazio sotto */
+}
+
+.targa {
+    margin-top: 1px; /* Allineamento verticale */
+}

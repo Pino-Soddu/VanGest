@@ -1,0 +1,238 @@
+﻿@namespace VanGest.Server.Components.Chat
+@using VanGest.Server.Services
+@using VanGest.Server.Services.Vans
+@using VanGest.Server.Models
+@using VanGest.Server.Models.Filters
+@using VanGest.Enums
+@inject IDeepSeekService DeepSeekService
+@inject IHttpClientFactory httpClientFactory
+@inject ILogger<ChatComponent> logger
+@inject IContextService ContextService
+@inject IVanService VanService
+@implements IDisposable
+
+<div class="chat-container">
+    <div class="chat-messages">
+        @foreach (var msg in conversation)
+        {
+            <div class="message @(msg.IsUserMessage ? "user-message" : "ai-message")">
+                @if (msg.IsUserMessage)
+                {
+                    <div class="message-content">@msg.Content</div>
+                }
+                else
+                {
+                    <div class="ai-response">
+                        @if (!string.IsNullOrWhiteSpace(msg.Content))
+                        {
+                            var lines = msg.Content.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            <div class="message-content">
+                                @foreach (var line in lines)
+                                {
+                                    if (line.StartsWith("•"))
+                                    {
+                                        <div class="suggestion-item">
+                                            <span class="suggestion-bullet">•</span>
+                                            @line.Substring(1).Trim()
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="message-text">@line</div>
+                                    }
+                                }
+                            </div>
+                        }
+
+                        @if (msg.Vans != null && !msg.IsStaffMode)
+                        {
+                            <CustomerChatBlock Vans="msg.Vans" />
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Input chat (comune a entrambi i flussi) -->
+    <div class="chat-input-container">
+        <input @bind="userInput"
+               @bind:event="oninput"
+               @onkeypress="HandleKeyPress"
+               placeholder="Scrivi la tua richiesta..."
+               disabled="@isLoading" />
+        <button @onclick="SendRequest" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner"></span>
+                <span>Elaborazione...</span>
+            }
+            else
+            {
+                <span>Invia</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    private string userInput = string.Empty;
+    private bool isLoading = false;
+    private List<ChatMessage> conversation = new();
+    private bool _isDisposed;
+    [Parameter] public bool IsStaffMode { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (ContextService != null)
+        {
+            ContextService.OnContestoCambiato += HandleContestoChanged;
+        }
+    }
+
+    private void HandleContestoChanged()
+    {
+        if (!_isDisposed)
+        {
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!_isDisposed && ContextService != null)
+        {
+            ContextService.OnContestoCambiato -= HandleContestoChanged;
+            _isDisposed = true;
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !isLoading)
+        {
+            await SendRequest();
+        }
+    }
+
+    private async Task SendRequest()
+    {
+        if (string.IsNullOrWhiteSpace(userInput) || isLoading)
+            return;
+
+        // Azzera la conversazione prima di ogni nuova richiesta
+        conversation.Clear(); 
+
+        isLoading = true;
+        conversation.Add(new ChatMessage
+            {
+                Content = userInput,
+                IsUserMessage = true
+            });
+
+        var request = userInput;
+        userInput = "";
+
+        try
+        {
+            var contesto = ContextService?.ContestoAttuale ?? ContestoApplicativo.Prenotazione;
+            var result = await DeepSeekService.AnalyzeRequestAsync(request, contesto);
+
+            List<Van> vans = new();
+            if (result.Filters is VanFilter filter) // Usa direttamente VanFilter
+            {
+                vans = await VanService.GetVansAsync(filter); // Chiamata diretta al servizio
+                vans = await VanService.GetVansAsync(filter);
+
+                if (vans.Any())
+                {
+                    conversation.Add(new ChatMessage
+                        {
+                            Content = result.Answer,
+                            IsUserMessage = false,
+                            Vans = contesto == ContestoApplicativo.Prenotazione ? vans : null,
+                            ARVans = null
+                        });
+                }
+                else
+                {
+                    var suggestion = await DeepSeekService.GetNoResultsSuggestionAsync(filter);
+                    conversation.Add(new ChatMessage
+                        {
+                            Content = suggestion,
+                            IsUserMessage = false,
+                            Vans = null
+                        });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Errore durante l'elaborazione");
+            conversation.Add(new ChatMessage
+                {
+                    Content = "Errore durante l'elaborazione",
+                    IsUserMessage = false
+                });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string BuildQueryString(object? filters)
+    {
+        if (filters == null) return string.Empty;
+
+        var parameters = new List<string>();
+        foreach (var prop in filters.GetType().GetProperties())
+        {
+            var value = prop.GetValue(filters);
+            if (value != null && !string.IsNullOrEmpty(value.ToString()))
+                parameters.Add($"{prop.Name}={Uri.EscapeDataString(value.ToString()!)}");
+        }
+        return string.Join("&", parameters);
+    }
+
+    // Metodo per gestire i risultati dei filtri avanzati (solo Staff)
+    public void HandleAdvancedFilterResults(List<ARVan> arVans, List<string> visibleColumns)
+    {
+        conversation.Add(new ChatMessage
+            {
+                Content = $"🔍 {arVans.Count} veicoli trovati",
+                IsCompactGrid = true,
+                IsStaffMode = true,
+                VisibleColumns = visibleColumns,
+                ARVans = arVans,
+                MessageId = conversation.Count + 1
+            });
+        StateHasChanged();
+
+    }
+
+    private void HandleDeleteResult(int messageId)
+    {
+        var messageToRemove = conversation.FirstOrDefault(m => m.MessageId == messageId);
+        if (messageToRemove != null)
+        {
+            conversation.Remove(messageToRemove);
+            StateHasChanged();
+        }
+    }
+
+
+    private class ChatMessage
+    {
+        public string Content { get; set; } = string.Empty;
+        public bool IsUserMessage { get; set; }
+        public object? Filters { get; set; }
+        public List<Van>? Vans { get; set; } // Usato solo per Clienti
+        public bool IsStaffMode { get; set; }
+        public bool IsCompactGrid { get; set; }
+        public List<string>? VisibleColumns { get; set; }
+        public List<ARVan>? ARVans { get; set; } // Usato solo per Staff
+        public int MessageId { get; set; }
+    }
+}

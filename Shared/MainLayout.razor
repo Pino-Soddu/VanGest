@@ -1,0 +1,14 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+
+<ModalContainer /> <!-- Deve essere PRIMA del layout principale -->
+
+<div class="layout-root">
+    @Body
+</div>
+
+<style>
+    .layout-root {
+        display: contents;
+    }
+</style>

@@ -1,0 +1,71 @@
+﻿@* Blocco dedicato esclusivamente alla visualizzazione Clienti (card) *@
+@namespace VanGest.Server.Components.Chat
+@using VanGest.Server.Models
+@using VanGest.Server.Models.Filters
+
+<div class="van-results">
+    @if (Vans != null && Vans.Any())
+    {
+        <h4>@GetResultsTitle(Vans.Count)</h4>
+        <div class="van-grid">
+            @foreach (var van in Vans)
+            {
+                <div class="van-card">
+                    <img src="@van.ImageUrl" alt="@van.Marca @van.Modello" />
+                    <div class="van-details">
+                        <h5>@van.Marca @van.Modello</h5>
+                        <p>@van.Località - @van.Comune</p>
+                        <p>Alimentazione: @ConvertFuelType(van.Alimentazione)</p>
+                        <p>Disponibilità: @GetAvailabilityText(van.Disponibile)</p>
+                        <button class="btn-booking" @onclick="() => StartBooking(van.IdVeicolo)">
+                            Prenota
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (Vans != null)
+    {
+        <p class="no-results">Nessun furgone disponibile</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<Van>? Vans { get; set; }
+
+    // Metodo: Formatta il titolo in base al numero di risultati
+    private string GetResultsTitle(int count) => count switch
+    {
+        0 => "Nessun risultato",
+        1 => "1 furgone trovato",
+        _ => $"{count} furgoni disponibili"
+    };
+
+    // Metodo: Converti "diesel" → "Gasolio" (come da specifiche)
+    private string ConvertFuelType(string alimentazione) => alimentazione.ToLower() switch
+    {
+        "diesel" => "Gasolio",
+        "benzina" => "Benzina",
+        _ => alimentazione
+    };
+
+    // Metodo: Utilizza solo Disponibile
+    private string GetAvailabilityText(string disponibile)
+    {
+        // Debug: verifica che il valore sia coerente con le regole DeepSeek
+        if (disponibile != "D")
+        {
+            Console.WriteLine($"⚠️ Stato inaspettato durante la prenotazione: {disponibile}");
+        }
+        return "🟢 Disponibile"; // Forzato a "D" dal filtro
+    }
+
+    // Metodo: Placeholder per prenotazione (da implementare)
+    private void StartBooking(int vanId)
+    {
+        // TODO: Collegare alla logica di prenotazione
+        Console.WriteLine($"Prenotazione avviata per veicolo {vanId}");
+    }
+}

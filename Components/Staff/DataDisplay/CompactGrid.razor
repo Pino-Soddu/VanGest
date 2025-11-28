@@ -1,0 +1,425 @@
+﻿@using VanGest.Server.Models
+@using System.Linq
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@using VanGest.Server.Components.Staff.Map
+@inject VanGest.Server.Components.Staff.Map.GoogleMapsOverlay MapsOverlay
+@inject IContextService ContextService
+@inject ExcelExportService ExcelExportService
+@inject ModalService ModalService
+@inject IJSRuntime JSRuntime
+
+<div class="compact-grid @GetGridColorClass()">
+    <div class="grid-header">
+        <div class="header-main">
+            <span class="search-icon">🔍</span>
+            <span class="result-count">@Data.Count veicoli</span>
+            <div class="filter-display" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                @if (!string.IsNullOrEmpty(ContextService.LastStaffFilterFormatted))
+                {
+                    <span class="filter-label">Filtri: </span>
+                    <span class="filter-values">@ContextService.LastStaffFilterFormatted</span>
+                }
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <!-- Visualizza Icona Attenzione se ci sono allarmi -->
+            @if (ConteggioAllarmi > 0)
+            {
+                <div class="allarmi-badge @(_mostraSoloAllarmi ? "active" : "")"
+                     @onclick="ToggleMostraAllarmi"
+                     title="@(_mostraSoloAllarmi ? "Mostra tutte" : "Mostra solo righe con allarmi")">
+                    <img src="/icons/warning.svg" class="icona-allarme" />
+                    <span class="contatore-allarmi">@ConteggioAllarmi</span>
+                </div>
+            }
+
+            <!-- Nuova icona Filtri -->
+            <button @onclick="() => OnToggleFilters.InvokeAsync()"
+            title="Mostra filtri"
+            class="action-btn filter-btn @(IsFilterActive ? "active" : "")">
+                <img src="/icons/filter.svg" alt="Filtri" class="header-icon" />
+            </button>
+
+            <!-- Nuova icona Mappa -->
+            <button @onclick="ShowOnMap"
+            title="Visualizza su mappa"
+            class="action-btn map-btn">
+                <img src="/icons/map-geo.svg" alt="Mappa" class="header-icon" />
+            </button>
+
+            <!-- Icona esistente Excel -->
+            <button @onclick="ExportToExcel"
+            title="Esporta in Excel"
+            class="action-btn export-btn">
+                <img src="/icons/excel-48.svg" alt="Excelx" class="header-icon" />
+            </button>
+        </div>
+    </div>
+
+    <div class="grid-scroll-container">
+        <table class="data-grid">
+            <thead>
+                <tr>
+                    @foreach (var col in GetOrderedColumns())
+                    {
+                        <th style="@GetColumnWidth(col)">@GetHeaderText(col)</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Data)
+                {
+                    <tr>
+                        @foreach (var col in GetOrderedColumns()) 
+                        {
+                            <td style="@GetColumnWidth(col)" title="@GetFullValue(item, col)">
+                                <div class="cell-content">@FormatValue(item, col)</div>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<int> OnDeleteRequested { get; set; } = default;
+    [Parameter] public EventCallback OnToggleFilters { get; set; } = default!;
+    [Parameter] public EventCallback<List<ARVan>> DataChanged { get; set; }
+    [Parameter] public List<ARVan> Data { get; set; } = new();
+    [Parameter] public List<string> VisibleColumns { get; set; } = new();
+    private Dictionary<string, List<string>> CampiPerCategoria = new()
+        {
+            ["DATI BASE"] = new() {
+                "IdVeicolo",
+                "Targa",
+                "Telaio",
+                "Disponibile",
+                "UltUbicazione"
+            },
+            ["TERRITORIALE"] = new() {
+                "Località",
+                "Comune",
+                "Provincia",
+                "Regione"
+            },
+            ["COMMERCIALE"] = new() {
+                "ClienteUbicazione",
+                "Proprietario",
+                "Locatario",
+                "Utilizzatore",
+                "SubUtilizzatore",
+                "MetodoAcquisizione",
+            },
+            ["MANUTENZIONE"] = new() {
+                "DataScadenzaPremio",
+                "DataProssimaRevisione",
+                "DataScadenzaATP",
+            },
+
+            ["CARATTERISTICHE"] = new() {
+                "Marca",
+                "Modello",
+                "Alimentazione",
+                "Segmento"
+            },
+
+            ["TRACCIAMENTO GPS"] = new() {
+                "EsisteSuTrack",
+                "OnlineEffettivo",
+                "TipoSosta",
+                "TipoSatTrack",
+                "ModelloTrack",
+                "MatricolaTrack",
+                "ContaKm",
+                "EventoGPS",
+                "VelocitaGPS",
+                "IndirizzoGPS",
+                "NggOffLine"
+                },
+        };
+    [Parameter] public int MessageId { get; set; }
+    public ARFilter Filter { get; set; } = new();
+    public string? FilterText { get; set; }
+    public bool IsFilterActive = false;
+    private bool _mostraSoloAllarmi = false;
+    private List<ARVan> _righeOriginali = new();
+
+    private int ConteggioAllarmi =>
+        (ColonneDateVisibili && Data != null)
+            ? Data.Count(item => item?.HaAllarmi == true)
+            : 0;
+
+    private bool ColonneDateVisibili =>
+        VisibleColumns?.Any(c =>
+            c == nameof(ARVan.DataScadenzaPremio) ||
+            c == nameof(ARVan.DataProssimaRevisione) ||
+            c == nameof(ARVan.DataScadenzaATP)
+        ) == true;
+
+    private List<string> GetOrderedColumns()
+    {
+        // 1. Filtra le colonne selezionate e mantieni l'ordine di CampiPerCategoria
+        var orderedColumns = CampiPerCategoria
+            .SelectMany(categoria => categoria.Value)
+            .Where(campo => VisibleColumns.Contains(campo))
+            .ToList();
+
+        // 2. Aggiungi colonne derivate di TipoSosta (se presente)
+        if (orderedColumns.Contains("TipoSosta"))
+        {
+            int index = orderedColumns.IndexOf("TipoSosta");
+            orderedColumns.InsertRange(index + 1, new[] { "DataInizio", "DataFine", "Durata" });
+        }
+
+        // 3. Log di debug (rimuovi dopo il test)
+        //Console.WriteLine($"Colonne ordinate: {string.Join(", ", orderedColumns)}");
+
+        return orderedColumns;
+    }
+
+    private string GetGridColorClass() => $"grid-color-{MessageId % 4}";
+
+    private string GetColumnWidth(string column)
+    {
+        return column switch
+        {
+            "IdVeicolo" => "width: 50px;",
+            "Targa" => "width: 80px;",
+            "Telaio" => "width: 100px;",
+            "Disponibile" => "width: 100px;",
+            "UltUbicazione" => "width: 350px;",
+            "Località" or "Comune" => "width: 150px;",
+            "Provincia" or "Regione" => "width: 100px;",
+            "Marca" or "Modello" or "Alimentazione" => "width: 120px;",
+            "Segmento" => "width: 220px;",
+            "ClienteUbicazione" or "Proprietario" or "Locatario" or "Utilizzatore" or "SubUtilizzatore" or "MetodoAcquisizione" => "width: 250px;",
+            "DataScadenzaPremio" or "DataProssimaRevisione" or "DataScadenzaATP" => "width: 120px;",
+            
+            "EsisteSuTrack" or "OnlineEffettivo" => "width: 40px;",
+            "TipoSatTrack" or "ModelloTrack" => "width: 80px;",
+            "MatricolaTrack" => "width: 80px;",
+            "TipoSosta" => "width: 40px;", 
+            "DataInizio" or "DataFine" => "width: 100px;", 
+            "Durata" => "width: 75px;", 
+            "ContaKm" => "width: 60px;",
+            "VelocitaGPS" => "width: 50px;",
+            "EventoGPS" => "width: 70px;",
+            "IndirizzoGPS" => "width: 250px;",
+            "NggOffLine" => "width: 60px;",
+
+
+            _ => "min-width: 200px;"
+        };
+    }
+
+    private string GetHeaderText(string columnName)
+    {
+        return columnName switch
+        {
+            "IdVeicolo" => "ID",
+            "Targa" => "Targa",
+            "Telaio" => "Telaio",
+            "Disponibile" => "Stato Veicolo",
+            "UltUbicazione" => "Ultima Ubicazione",
+            "Località" => "Località",
+            "Comune" => "Comune",
+            "Provincia" => "Provincia",
+            "Regione" => "Regione",
+            "Marca" => "Marca",
+            "Modello" => "Modello",
+            "Alimentazione" => "Alimentazione",
+            "Segmento" => "Segmento",
+            "ClienteUbicazione" => "Cliente",
+            "Proprietario" => "Proprietario",
+            "Locatario" => "Locatario",
+            "Utilizzatore" => "Utilizzatore",
+            "SubUtilizzatore" => "Sub Utilizzatore",
+            "MetodoAcquisizione" => "Metodo Acquisizione",
+            "DataScadenzaPremio" => "Data Scad. Premio",
+            "DataProssimaRevisione" => "Prossima Revisione",
+            "DataScadenzaATP" => "Data Scad. ATP",
+
+            "EsisteSuTrack" => "Veicoli monitorati",
+            "OnlineEffettivo" => "On Line",
+            "TipoSosta" => "Stato",
+            "TipoSatTrack" => "Fornitore GPS",
+            "ModelloTrack" => "Modello GPS",
+            "MatricolaTrack" => "Matricola GPS",
+
+            "DataInizio" => "Data Inizio",
+            "DataFine" => "Data Fine",
+            "ContaKm" => "Odometro",
+            "VelocitaGPS" => "Velocità",
+            "EventoGPS" => "Evento",
+            "IndirizzoGPS" => "Indirizzo",
+            "NggOffLine" => "GG. Offline",
+
+            _ => columnName
+        };
+    }
+
+    private string GetFullValue(ARVan item, string property)
+    {
+        return item.GetType().GetProperty(property)?.GetValue(item)?.ToString() ?? "";
+    }
+
+    private MarkupString FormatValue(ARVan item, string property)
+    {
+        var value = item.GetType().GetProperty(property)?.GetValue(item)?.ToString();
+
+        if (property == "Disponibile")
+        {
+            string iconHtml;
+            string description;
+
+            switch (value)
+            {
+                case "D": // Disponibile
+                    iconHtml = "<i class='fas fa-check-circle' style='color: green;'></i>";
+                    description = "Disponibile";
+                    break;
+                case "$": // Noleggiato
+                    iconHtml = "<i class='fas fa-times-circle' style='color: blue;'></i>";
+                    description = "In Noleggio";
+                    break;
+                case "A": // Assistenza
+                    iconHtml = "<i class='fas fa-info-circle' style='color: red;'></i>";
+                    description = "In Assistenza";
+                    break;
+                default:
+                    iconHtml = "<i class='fas fa-info-circle' style='color: gray;'></i>";
+                    description = "Altro";
+                    break;
+            }
+
+            return new MarkupString($"{iconHtml} {value} {description}");
+        }
+        else if (property == "DataScadenzaPremio")
+        {
+            if (!DateTime.TryParse(item.DataScadenzaPremio?.ToString(), out var dataScadenza))
+                return new MarkupString("<span class='scadenza-mancante'>N/D</span>");
+
+            var giorni = (dataScadenza - DateTime.Today).TotalDays;
+            string classe;
+
+            if (giorni >= -10 && giorni < 0)
+                classe = "scadenza-recente";
+            else if (giorni < -10)
+                classe = "scadenza-avanzata";
+            else if (giorni >= 0 && giorni <= 4)
+                classe = "scadenza-imminente";
+            else
+                classe = "";
+
+            return new MarkupString($"<span class='{classe}'>{dataScadenza:dd/MM/yyyy}</span>");
+        }
+        else if (property == "DataProssimaRevisione")
+        {
+            if (item.DataProssimaRevisione == null)
+                return new MarkupString("<span class='scadenza-mancante'>Revisione non registrata</span>");
+
+            if (DateTime.TryParse(item.DataProssimaRevisione.ToString(), out var dataScadenza))
+            {
+                if (dataScadenza < DateTime.Today)
+                    return new MarkupString($"<span class='scadenza-avanzata'>{dataScadenza:dd/MM/yyyy}</span>");
+
+                return new MarkupString($"{dataScadenza:dd/MM/yyyy}");
+            }
+
+            return new MarkupString("<span class='scadenza-mancante'>Formato non valido</span>");
+        }
+        else if (property == "DataScadenzaATP")
+        {
+            if (item.DataScadenzaATP == null)
+                return new MarkupString("");
+
+            if (DateTime.TryParse(item.DataScadenzaATP.ToString(), out var dataScadenza))
+            {
+                if (dataScadenza < DateTime.Today)
+                    return new MarkupString($"<span class='scadenza-avanzata'>{dataScadenza:dd/MM/yyyy}</span>");
+
+                return new MarkupString($"{dataScadenza:dd/MM/yyyy}");
+            }
+
+            return new MarkupString(item.DataScadenzaATP.Value.ToString("dd/MM/yyyy"));
+        }
+        else if (property == "DataInizio" || property == "DataFine")
+        {
+            if (DateTime.TryParse(value, out var data))
+                return new MarkupString($"<span class='data-sosta'>{data:dd/MM/yyyy HH:mm}</span>");
+
+            return new MarkupString("<span class='data-mancante'>N/D</span>");
+        }
+        else if (property == "TipoSosta")
+        {
+            // Mappa i valori di TipoSosta a colori e testo
+            var (bgColor, text) = value?.ToString() switch
+            {
+                "M" => ("#008000", "M"),  // Verde
+                "F" => ("#0000FF", "F"),  // Blu
+                "S" => ("#0000FF", "S"),  // Blu
+                "P" => ("#0000FF", "P"),  // Blu
+                _ => ("#9E9E9E", "?")     // Grigio (valore sconosciuto)
+            };
+
+            return new MarkupString(
+                $"<span style='display:inline-block; width:24px; height:24px; border-radius:50%; background:{bgColor}; color:white !important; font-weight:bold; text-align:center; line-height:24px;'>{text}</span>");
+        }
+        else if (property == "Durata")
+        {
+            if (item.DataInizio.HasValue && item.DataFine.HasValue)
+            {
+                TimeSpan durata = item.DataFine.Value - item.DataInizio.Value;
+
+                // Nuova formattazione che include i giorni
+                string formattedDuration = "";
+
+                if (durata.Days > 0)
+                {
+                    formattedDuration = $"{durata.Days}g {durata.Hours}h {durata.Minutes}m";
+                }
+                else
+                {
+                    formattedDuration = $"{durata.Hours}h {durata.Minutes}m";
+                }
+
+                return new MarkupString(
+                    $"<span style='color:#0066cc; font-weight:bold;'>" +
+                    $"{formattedDuration}</span>"
+                );
+            }
+            return new MarkupString("<span style='color:#9E9E9E;'>N/D</span>");
+        }
+
+        return new MarkupString(value ?? string.Empty);
+    }
+
+    private async Task ExportToExcel()
+    {
+        if (Data?.Any() != true) return;
+        await ExcelExportService.ExportToExcel(Data, VisibleColumns, "Veicoli");
+    }
+
+    private async Task ShowOnMap()
+    {
+        if (Data?.Any() != true) return;
+        await JSRuntime.InvokeVoidAsync("eval", "window.scrollTo({ top: 0, behavior: 'smooth' })");
+        var veicoliValidi = Data.Where(v => v.Latitudine != 0 && v.Longitudine != 0).ToList();
+        GoogleMapsOverlay.Show(ModalService, veicoliValidi);
+    }
+
+    private void ToggleMostraAllarmi()
+    {
+        if (_righeOriginali.Count == 0 && Data?.Count > 0)
+            _righeOriginali = Data.ToList();
+
+        _mostraSoloAllarmi = !_mostraSoloAllarmi;
+        Data = _mostraSoloAllarmi
+            ? _righeOriginali.Where(x => x.HaAllarmi).ToList()
+            : _righeOriginali.ToList();
+    }
+}

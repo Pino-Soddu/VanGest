@@ -1,0 +1,514 @@
+﻿/* CONTENITORE PRINCIPALE */
+.compact-grid {
+    border-radius: 8px;
+    margin: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: white;
+    overflow: hidden;
+}
+
+
+/* INTESTAZIONE CONTROLLI */
+.grid-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.result-count {
+    width: 120px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 1.2rem;
+}
+
+.grid-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 0.5rem;
+}
+
+/* ---------------------------
+  SCROLLBAR PERSONALIZZATA
+/---------------------------*/
+/* Contenitore della griglia con overflow orizzontale */
+.grid-scroll-container {
+    overflow-x: auto;
+    height: 63vh; /* Altezza dinamica: 60% dell'altezza della viewport */
+    max-height: 63vh; /* Aggiunto per sicurezza */
+}
+
+/* La parte della griglia che deve essere scrollabile verticalmente */
+.grid-body {
+    height: 100%; /* Si adatta all'altezza del contenitore */
+    overflow-y: auto; /* Mostra la barra di scorrimento verticale se il contenuto supera l'altezza */
+}
+
+    /* Se vuoi una versione espansa con altezza maggiore */
+    .grid-body.expanded {
+        height: 100%; /* Puoi modificare questa altezza se necessario */
+    }
+
+/* Personalizzazione della scrollbar per Webkit (Chrome, Safari, Edge) */
+.grid-scroll-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.grid-scroll-container::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+
+
+/* ---------------------
+      DATA-GRID
+/---------------------*/
+.data-grid {
+    width: 100%;
+    min-width: 100%; /* Mantiene la larghezza minima */
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: 0.8rem;
+}
+
+    .data-grid thead th {
+        position: sticky;
+        top: 0;
+        background: #e9ecef; /* colore di sfondo uguale a quello già usato */
+        z-index: 10; /* sopra le righe */
+    }
+
+    .data-grid th {
+        position: sticky;
+        top: 0;
+        background: #e9ecef;
+        padding: 0.5rem 1rem;
+        text-align: left;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .data-grid td {
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: top;
+    }
+
+.data-grid {
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+    .data-grid th, .data-grid td {
+        padding: 8px;
+        border: 1px solid #ddd;
+        overflow: hidden;
+    }
+
+
+    /* Rendi le celle più compatte */
+    .data-grid th,
+    .data-grid td {
+        padding: 4px 8px; /* riduci i padding verticali e orizzontali */
+        line-height: 1.2; /* abbassa il line-height per meno spazio tra le righe */
+    }
+
+
+/* ---------------------
+  TESTO DELLA DATA-GRID
+/---------------------*/
+
+.cell-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+}
+
+/* Tooltip naturale del browser */
+[title] {
+    position: relative;
+}
+
+/* ---------------------
+    PULSANTI
+/---------------------
+.delete-btn {
+    color: #dc3545;
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 0 5px;
+}
+*/
+.delete-btn {
+    background: none;
+    border: none;
+    color: #e53e3e;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0 5px;
+    transition: color 0.2s;
+}
+
+    .delete-btn:hover {
+        color: #c53030;
+    }
+
+
+/* Intestazione griglia */
+.grid-header {
+    position: sticky; /* Rende la testata fissa durante lo scroll */
+    top: 0; /* Posizione in alto rispetto al contenitore */
+    z-index: 10; /* Assicurati che sia sopra le righe */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.header-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+.filter-display {
+    margin-left: 8px;
+    color: #555;
+    font-size: 1.2em;
+    max-width: 800px;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: flex-end; /* Allinea tutto a destra */
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.filter-summary {
+    background: #e6f7ff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border-left: 2px solid #1890ff;
+    font-size: 0.85em;
+    margin-left: 8px;
+}
+
+
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+    .action-btn:hover {
+        background-color: #f0f0f0;
+    }
+
+.header-icon {
+    width: 26px; /* Aumentato da 20px */
+    height: 26px; /* Aumentato da 20px */
+    vertical-align: middle;
+    margin: 0 4px; /* Aggiunto margine */
+}
+
+/* Stato attivo icona filtri */
+.action-btn.filter-btn.active {
+    background-color: #e0e0e0;
+}
+
+    .action-btn.filter-btn.active img {
+        filter: brightness(0.8);
+    }
+
+
+.data-grid td span {
+    display: block; /* Occupa tutto lo spazio della cella */
+    padding: 4px; /* Spaziatura interna */
+    border-radius: 3px; /* Angoli arrotondati */
+}
+
+/* Colori di background per gli stati */
+/* Ciano */
+.scadenza-imminente {
+    background-color: #00FFFF;
+}
+/* Giallo */
+.scadenza-recente {
+    background-color: #FFFF00;
+}
+/* Rosso */
+.scadenza-avanzata {
+    background-color: #FF0000;
+}
+/* Grigio (solo testo) */
+.scadenza-mancante {
+    color: #CCCCCC;
+}
+
+/* Colore rosso per scadenze avanzate (10 giorni fa) */
+.data-grid td span.scadenza-avanzata {
+    background-color: #FF0000;
+    color: white; /* Testo bianco per leggibilità */
+    display: inline-block; /* Alternativa a 'block' se preferisci */
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+::deep .scadenza-avanzata {
+    background-color: #FF0000 !important;
+    color: white !important;
+    display: inline-block !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+}
+
+/* Colore giallo per scadenze recenti (1-10 giorni fa) */
+::deep .scadenza-recente {
+    background-color: #FFFF00 !important; /* Giallo puro */
+    color: #333 !important; /* Testo scuro per contrasto */
+    display: inline-block !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+}
+
+/* Colore CIANO per scadenze imminenti (0-4 giorni) */
+::deep .scadenza-imminente {
+    background-color: #00FFFF !important; /* Ciano puro */
+    color: #000 !important; /* Testo nero per contrasto */
+    display: inline-block !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+}
+
+/* Controlli sulla data Scadenza Revisione) */
+
+.scadenza-avanzata {
+    background-color: #FF0000 !important;
+    color: white !important;
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.scadenza-mancante {
+    color: #CCCCCC !important;
+    font-style: italic;
+}
+
+
+/* Badge allarmi */
+.allarmi-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: #fff3cd;
+    border: 1px solid #ffecb5;
+    border-radius: 12px;
+    padding: 2px 8px;
+    margin-right: 10px;
+    cursor: default;
+}
+
+.icona-allarme {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+
+.contatore-allarmi {
+    color: #856404;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+
+
+.allarmi-badge.active {
+    background-color: #ffecb5; /* Giallo più intenso */
+    box-shadow: 0 0 0 2px #ffc107;
+}
+
+.allarmi-badge {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* NUOVI STILI PER IL RIEPILOGO FILTRI */
+.filter-display {
+    background-color: #f0f7ff;
+    border-left: 4px solid #0066cc;
+    border-radius: 6px;
+    padding: 8px 14px;
+    margin-left: 15px;
+    font-size: 1.05rem; /* Aumentato da 0.9rem */
+    color: #003366;
+    font-weight: 600; /* Più grassetto */
+    display: inline-block;
+    max-width: 100%;
+    min-width: 800px;
+    white-space: normal; /* Abilita multilinea */
+    line-height: 1.4; /* Spaziatura tra righe */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    min-height: 44px; /* Altezza minima garantita */
+}
+
+.filter-display-container {
+    display: flex;
+    align-items: center;
+    min-width: 0; /* Permette il text-overflow */
+}
+
+.filter-icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+    color: #004080;
+    flex-shrink: 0;
+}
+
+.filter-content {
+    overflow: hidden;
+}
+
+.filter-label {
+    font-weight: 700; /* Più grassetto */
+    color: #002b5c;
+    margin-right: 8px;
+    font-size: 1.1em;
+    display: inline-block;
+}
+
+.filter-values {
+    color: #0066cc;
+    font-weight: 600;
+    white-space: normal;
+    word-break: break-word; /* Forza a capo se necessario */
+}
+
+/* Effetto hover */
+.filter-display:hover {
+    background-color: #e1f0ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+
+/* Versione compatta per mobile */
+@media (max-width: 768px) {
+    .filter-display {
+        padding: 6px 10px;
+        font-size: 1rem;
+        margin-left: 8px;
+        min-height: 40px;
+    }
+
+    .filter-icon {
+        font-size: 1rem;
+        margin-right: 6px;
+    }
+}
+
+/* Tooltip avanzato */
+.filter-display[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a365d;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    width: max-content;
+    max-width: 90vw;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.tipo-sosta {
+    font-weight: 500;
+}
+
+.data-sosta {
+    color: #333;
+}
+
+.durata-sosta {
+    color: #0066cc;
+    font-weight: 500;
+}
+
+.data-mancante {
+    color: #999;
+    font-style: italic;
+}
+
+/* Stile base del badge */
+.tipo-sosta-badge {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+    /* Colori specifici */
+    .tipo-sosta-badge.movimento {
+        background-color: #4CAF50; /* Verde */
+    }
+
+    .tipo-sosta-badge.fermata {
+        background-color: #2196F3; /* Blu */
+    }
+
+    .tipo-sosta-badge.sosta {
+        background-color: #2196F3; /* Blu (stesso di Fermata) */
+    }
+
+    .tipo-sosta-badge.parcheggio {
+        background-color: #2196F3; /* Blu (stesso di Fermata) */
+    }
+
+    .tipo-sosta-badge.default {
+        background-color: #9E9E9E; /* Grigio (valore non riconosciuto) */
+    }
+.durata {
+    color: #0066cc;
+    font-weight: 500;
+}
+
+.durata-mancante {
+    color: #9E9E9E;
+    font-style: italic;
+}

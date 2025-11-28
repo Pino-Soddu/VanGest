@@ -1,0 +1,40 @@
+﻿@inject ModalService ModalService
+
+@if (IsVisible)
+{
+    <div class="modal-overlay @(Options.Fullscreen ? "fullscreen" : "")">
+        <div class="modal-content">
+            @Content
+        </div>
+    </div>
+}
+
+@code {
+    private bool IsVisible { get; set; }
+    private string? Title { get; set; }
+    private RenderFragment? Content { get; set; }
+    private ModalService.ModalOptions Options { get; set; } = new ModalService.ModalOptions();
+
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("[2] ModalContainer inizializzato!"); // Debug
+        ModalService.OnShow += HandleShowModal;
+    }
+
+    private void HandleShowModal(string title, RenderFragment content, ModalService.ModalOptions options)
+    {
+        Console.WriteLine("[3] Evento OnShow ricevuto!"); // Debug
+        Title = title;
+        Content = content;
+        Options = options;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    private void Close() => IsVisible = false;
+
+    public void Dispose()
+    {
+        ModalService.OnShow -= HandleShowModal;
+    }
+}

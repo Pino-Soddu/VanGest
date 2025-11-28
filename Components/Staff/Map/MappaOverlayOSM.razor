@@ -1,0 +1,115 @@
+﻿@* 
+  Componente overlay derivato da MappaPage.razor, con:
+  1. Rimozione di @page e NavigationManager
+  2. Aggiunta di parametri per dati e chiusura
+*@
+
+@inject IJSRuntime JS
+@using System.Text.Json
+@using Microsoft.JSInterop
+
+<div class="map-overlay-container" @ref="mapContainer">
+    <div class="map-overlay-header">
+        Mappa Località
+        <button class="close-btn" @onclick="CloseMap">×</button>
+    </div>
+    <div id="osm-map" class="map-overlay-body"></div>
+</div>
+
+@code {
+    // Parametri in input (sostituiscono sessionStorage)
+    [Parameter] public List<Localita>? Localita { get; set; }
+    [Parameter] public EventCallback<Localita> OnMarkerUpdated { get; set; }
+    [Parameter]  public EventCallback OnCloseRequested { get; set; }
+    private ElementReference mapContainer;
+    private LocalitaMappa localitaSelezionata = new();
+    private DotNetObjectReference<MappaOverlayOSM>? dotNetHelper;
+    private HashSet<(Localita Item, string FieldName)> dirtyFields = new();
+
+
+    [JSInvokable]
+    public async Task OnMarkerDragEnd(int localitaId, double latitudine, double longitudine)
+    {
+        if (Localita == null) return;
+
+        var localita = Localita.FirstOrDefault(l => l.IdLocalita == localitaId);
+        if (localita == null) return;
+
+        // Salva le coordinate originali per eventuale rollback
+        var oldLat = localita.Latitudine;
+        var oldLng = localita.Longitudine;
+
+        // Aggiorna le coordinate
+        localita.Latitudine = Convert.ToDecimal(latitudine);
+        localita.Longitudine = Convert.ToDecimal(longitudine);
+
+        // Notifica il padre (LocalitaGrid) con i dati aggiornati
+        await OnMarkerUpdated.InvokeAsync(localita);
+    }
+
+    private class LocalitaMappa
+    {
+        public int IdLocalita { get; set; }
+        public string NomeLocalita { get; set; } = "";
+        public string Indirizzo { get; set; } = "";
+        public string Comune { get; set; } = "";
+        public double Latitudine { get; set; }
+        public double Longitudine { get; set; }
+    }
+
+    private async Task CloseMap()
+    {
+        await OnCloseRequested.InvokeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("vanGest.initMapDrag", mapContainer);
+
+            if (firstRender && Localita?.Count > 0)
+            {
+                dotNetHelper = DotNetObjectReference.Create(this);
+                try
+                {
+                    // Converti List<Localita> nel formato atteso da initOSMMap
+                    var localitaPerMappa = Localita
+                        .Where(l => l.Latitudine != 0 && l.Longitudine != 0)
+                        .Select(l => new LocalitaMappa
+                            {
+                                IdLocalita = l.IdLocalita,
+                                NomeLocalita = l.NomeLocalita,
+                                Indirizzo = l.Indirizzo,
+                                Comune = l.Comune,
+                                Latitudine = Convert.ToDouble(l.Latitudine),
+                                Longitudine = Convert.ToDouble(l.Longitudine)
+                            }).ToList();
+
+                    await JS.InvokeVoidAsync(
+                        "initOSMMap",
+                        localitaPerMappa,
+                        dotNetHelper // Passa il riferimento a Blazor
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Errore caricamento mappa: {ex.Message}");
+                    await JS.InvokeVoidAsync("alert", "Errore nel caricamento della mappa");
+                }
+            }
+        }
+    }
+
+    private void StartDrag()
+    {
+        // Metodo vuoto (la logica è tutta gestita da JS)
+        // Serve solo per evitare l'errore di compilazione
+    }
+
+    public void Dispose()
+    {
+        dotNetHelper?.Dispose();
+        JS.InvokeVoidAsync("vanGest.resetMapState");
+    }
+}

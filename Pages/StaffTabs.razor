@@ -1,0 +1,109 @@
+﻿@page "/staff"
+
+
+@namespace VanGest.Server.Pages
+@using VanGest.Server.Components.Staff.DataDisplay
+@using VanGest.Server.Components.Staff.Localita
+@using VanGest.Server.Components.Staff.Filters
+@inject IContextService ContextService
+@inject ILocalStorageService LocalStorage
+
+<div class="staff-tabs">
+    <!-- Testata StaffTabs.razor -->
+    <div class="staff-header-wrapper">
+        <div class="staff-header-content">
+            <img src="/images/vanrental-logo.png" class="staff-logo-compact"
+                 title="Area Riservata Staff" />
+            <span class="staff-title-compact">Area riservata per lo staff di VanGest</span>
+        </div>
+    </div>
+
+    <!-- Tab Header -->
+    <div class="tab-header">
+        <button @onclick="@(() => SwitchTab("filtri"))"
+                class="@(activeTab == "filtri" ? "active" : "")">
+            Consultazione stato veicoli
+        </button>
+        <button @onclick="@(() => SwitchTab("localita"))"
+                class="@(activeTab == "localita" ? "active" : "")">
+            Gestione Località
+        </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-body">
+        @if (activeTab == "filtri")
+        {
+            <div class="filters-grid-container" style="position:relative">
+                <!-- Griglia (sempre visibile) -->
+                <div class="grid-column @(showFilters ? "inactive" : "")">
+                    @if (risultatiFiltrati != null)
+                    {
+                        <CompactGrid Data="@risultatiFiltrati"
+                                     VisibleColumns="@ContextService.SelectedColumns"
+                                     OnToggleFilters="HandleToggleFilters" />
+                    }
+                </div>
+
+                <!-- Filtri (sovrapposti) -->
+                @if (showFilters)
+                {
+                    <div class="filters-column">
+                        <AdvancedFilter @ref="advancedFilter"
+                                        OnFiltriApplicati="OnFiltriApplicati"
+                                        OnToggleOverlay="ToggleFilters"
+                                        GridVisible="risultatiFiltrati?.Any() == true" />
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <LocalitaGrid />
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "filtri";
+    private List<ARVan>? risultatiFiltrati;
+    private AdvancedFilter? advancedFilter;
+    private bool isReady = false;
+    private bool showFilters = true; // Controlla la visibilità dei filtri
+
+    private void OnFiltriApplicati(List<ARVan> risultati)
+    {
+        risultatiFiltrati = risultati;
+        showFilters = false; // Nasconde i filtri dopo l'applicazione
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            activeTab = await LocalStorage.GetItemAsync<string>("lastActiveTab") ?? "filtri";
+            isReady = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SwitchTab(string tabName)
+    {
+        if (!isReady) return;
+
+        activeTab = tabName;
+        await LocalStorage.SetItemAsync("lastActiveTab", tabName);
+    }
+
+    private void HandleToggleFilters()
+    {
+        showFilters = !showFilters; // Inverte lo stato
+    }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+        StateHasChanged();
+    }
+}

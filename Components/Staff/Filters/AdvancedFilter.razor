@@ -1,0 +1,751 @@
+﻿@namespace VanGest.Server.Components.Staff.Filters
+@using Blazored.LocalStorage
+@using VanGest.Server.Components
+@using VanGest.Server.Models.Filters
+@using VanGest.Server.Services.ARVans
+@using VanGest.Enums
+@inject ILocalStorageService localStorage
+@inject IDeepSeekService deepSeekService
+@inject IJSRuntime JSRuntime
+@inject IARVanService ARService
+@inject IConfiguration config
+@inject IContextService ContextService
+@inject ILocalStorageService localStorage
+
+<div class="advanced-filter-container">
+    <div class="overlay-header">
+        <h3 class="overlay-title">FILTRI AVANZATI</h3>
+        <div class="overlay-actions">
+            <button class="btn-close @(GridVisible ? "" : "btn-disabled")"
+                    @onclick="HandleCloseClick"
+                    title="@(GridVisible ? "Chiudi" : "Completa la ricerca prima")">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <div class="categorie-verticali">
+        @foreach (var categoria in CampiPerCategoria)
+        {
+            <div class="categoria-verticale @(categorieAttive.Contains(categoria.Key) ? "categoria-espansa" : "")">
+                <!-- Intestazione categoria -->
+                <div class="intestazione-verticale" @onclick="() => GestisciClickCategoria(categoria.Key)">
+                    <div class="toggle-icon">
+                        @if (categorieAttive.Contains(categoria.Key))
+                        {
+                            <span>▼</span>
+                        }
+                        else
+                        {
+                            <span>▶</span>
+                        }
+                    </div>
+                    <h4>@categoria.Key</h4>
+                    <div class="mostra-tutti"
+                         @onclick:stopPropagation="true"
+                         @onclick="() => ToggleMostraTutti(categoria.Key)"
+                         title="@(mostraTuttiStato.TryGetValue(categoria.Key, out var stato) ? (stato == true ? "Nascondi tutti" : stato == false ? "Mostra tutti" : "Selezione parziale") : "Mostra tutti")">
+                        <span class="mostra-testo">
+                            @if (mostraTuttiStato.TryGetValue(categoria.Key, out var currentState))
+                            {
+                                @if (currentState == true)
+                                {
+                                    <text>Tutti selezionati</text>
+                                }
+                                else if (currentState == false)
+                                {
+                                    <text>Seleziona tutti</text>
+                                }
+                                else
+                                {
+                                    <text>Selezione parziale</text>
+                                }
+                            }
+                            else
+                            {
+                                <text>Seleziona tutti</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+
+                @if (categorieAttive.Contains(categoria.Key))
+                {
+                    <div class="campi-verticali">
+                        <!-- Blocco speciale solo per TRACCIAMENTO GPS -->
+                        @if (categoria.Key == "TRACCIAMENTO GPS")
+                        {
+                            <!-- 1. Toggle monitoraggio veicoli -->
+                            <div class="campo-verticale">
+                                <div class="campo-input-container">
+                                    <div class="campo-input-verticale @(filtroCorrente.EsisteSuTrack.HasValue ? "campo-filtrato" : "")">
+                                        <label>Veicoli monitorati</label>
+                                        <input type="checkbox"
+                                               @bind="filtroCorrente.EsisteSuTrack"
+                                               class="campo-checkbox" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Toggle stato trasmissione -->
+                            <div class="campo-verticale">
+                                <div class="campo-input-container">
+                                    <div class="campo-input-verticale @(_selectedOnlineStatus != OnlineStatus.Tutti ? "campo-filtrato" : "")">
+                                        <label>Stato Trasmissione</label>
+                                        <select @bind="_selectedOnlineStatus"
+                                                disabled="@(filtroCorrente.EsisteSuTrack != true)"
+                                                class="form-control-sm"
+                                                data-tooltip="@(filtroCorrente.EsisteSuTrack != true ? "Abilita 'Veicoli monitorati' per filtrare" : "")">
+                                            <option value="@OnlineStatus.Tutti">(Tutti)</option>
+                                            <option value="@OnlineStatus.SI">Trasmettendo (SI)</option>
+                                            <option value="@OnlineStatus.NO">Non trasmettendo (NO)</option>
+                                        </select>
+                                    </div>
+                                    @if (filtroCorrente.EsisteSuTrack != true)
+                                    {
+                                        <span class="campo-avviso"
+                                              title="Abilita 'Veicoli monitorati' per filtrare lo stato trasmissione">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+
+                            <!-- 3. Dropdown tipo sosta -->
+                            <div class="campo-verticale">
+                                <div class="campo-input-container">
+                                    <div class="campo-input-verticale @(filtroCorrente.TipoSosta != null ? "campo-filtrato" : "")">
+                                        <label>Stato Sosta</label>
+                                        <select @bind="filtroCorrente.TipoSosta" class="form-control-sm">
+                                            <option value="">(Tutti)</option>
+                                            <option value="M">Movimento</option>
+                                            <option value="F">Fermata</option>
+                                            <option value="S">Sosta</option>
+                                            <option value="P">Parcheggio</option>
+                                        </select>
+                                    </div>
+                                    <input type="checkbox"
+                                           checked="@(filtroCorrente.CampiSelezionati.GetValueOrDefault("TipoSosta", false))"
+                                           @onchange="@(() => ToggleCampoSelezionato("TipoSosta"))"
+                                           class="campo-checkbox"
+                                           style="width: 18px; height: 18px; margin: 0;" />
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Loop COMPLETO per i campi standard -->
+                        @foreach (var campo in categoria.Value.Where(c =>
+                       categoria.Key != "TRACCIAMENTO GPS" ||
+                       !new[] { "EsisteSuTrack", "OnlineEffettivo", "TipoSosta" }.Contains(c)))
+                        {
+                            <div class="campo-verticale">
+                                <div class="campo-input-container">
+                                    <div class="campo-input-verticale @(HasFilterValue(campo) ? "campo-filtrato" : "")">
+                                        <label>@OttieniEtichetta(campo)</label>
+                                        @if (IsNumericField(campo))
+                                        {
+                                            <input type="number"
+                                                   step="1"
+                                                   value="@(GetNumericFieldValue(campo))"
+                                                   @oninput="@(e => HandleNumericInput(campo, e.Value?.ToString()))"
+                                                   placeholder="Filtra per @OttieniEtichetta(campo)" />
+                                        }
+                                        else
+                                        {
+                                            <input type="text"
+                                                   value="@(filtroCorrente.GetType().GetProperty(campo)?.GetValue(filtroCorrente)?.ToString() ?? "")"
+                                                   @oninput="@(e => AggiornaFiltro(campo, e.Value?.ToString()))"
+                                                   placeholder="Filtra per @OttieniEtichetta(campo)" />
+                                        }
+                                    </div>
+                                    <input type="checkbox"
+                                           checked="@(filtroCorrente.CampiSelezionati.GetValueOrDefault(campo, false))"
+                                           @onchange="@(() => ToggleCampoSelezionato(campo))"
+                                           class="campo-checkbox" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="filter-actions-bar">
+        <button @onclick="ResettaFiltri">Azzera</button>
+        <button @onclick="ApplicaFiltri" class="primary">Cerca</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    }
+</div>
+
+
+
+@code {
+    [Parameter] public EventCallback OnToggleOverlay { get; set; }
+    [Parameter] public EventCallback<List<ARVan>> OnFiltriApplicati { get; set; } = default!;
+    [Parameter] public bool FiltersVisible { get; set; }
+    [Parameter] public bool GridVisible { get; set; }
+    private string ApiBaseUrl => "https://localhost:7011/api/AR";
+
+    private HashSet<string> categorieEspanse = new();
+    private HashSet<string> categorieAttive = new();
+    private HashSet<string> campiSelezionati = new();
+    private HashSet<string> campiDaMostrare = new();
+    private OnlineStatus _selectedOnlineStatus = OnlineStatus.Tutti;
+    private Dictionary<string, bool?> mostraTuttiStato = new();
+    private Dictionary<string, List<string>> CampiPerCategoria = new()
+        {
+            ["DATI BASE"] = new() {
+                "IdVeicolo",
+                "Targa",
+                "Telaio",
+                "Disponibile",
+                "UltUbicazione"
+            },
+            ["TERRITORIALE"] = new() {
+                "Località",
+                "Comune",
+                "Provincia",
+                "Regione"
+            },
+            ["COMMERCIALE"] = new() {
+                "ClienteUbicazione",
+                "Proprietario",
+                "Locatario",
+                "Utilizzatore",
+                "SubUtilizzatore",
+                "MetodoAcquisizione",
+            },
+            ["MANUTENZIONE"] = new() {
+                "DataScadenzaPremio",
+                "DataProssimaRevisione",
+                "DataScadenzaATP",
+            },
+
+            ["CARATTERISTICHE"] = new() {
+                "Marca",
+                "Modello",
+                "Alimentazione",
+                "Segmento"
+            },
+
+            ["TRACCIAMENTO GPS"] = new() {
+                "EsisteSuTrack",
+                "OnlineEffettivo",
+                "TipoSosta",
+                "TipoSatTrack",
+                "ModelloTrack",
+                "MatricolaTrack",
+                "ContaKm",
+                "EventoGPS",
+                "VelocitaGPS",
+                "IndirizzoGPS",
+                "NggOffLine"
+                },
+        };
+    private bool isMobile = false;
+    private List<string> colonneVisibili = new();
+    private const string StorageKey = "filtroStatoAvanzato_v2";
+    private ARFilter filtroCorrente = new();
+    private bool isLoading = false;
+
+    private bool IsGpsFieldChecked(string campo)
+    {
+        return campo switch
+        {
+            "EsisteSuTrack" => filtroCorrente.EsisteSuTrack == true,
+            "OnlineEffettivo" => filtroCorrente.OnlineEffettivo == "false",
+            _ => false
+        };
+    }
+
+    private void ToggleGpsField(string campo)
+    {
+        if (campo == "EsisteSuTrack")
+        {
+            filtroCorrente.EsisteSuTrack = !filtroCorrente.EsisteSuTrack;
+        }
+        else if (campo == "OnlineEffettivo")
+        {
+            filtroCorrente.OnlineEffettivo =
+                (filtroCorrente.OnlineEffettivo == "false")
+                ? string.Empty // Usa string.Empty invece di null
+                : "false";
+        }
+        StateHasChanged();
+    }
+
+    private async Task HandleCloseClick()
+    {
+        if (GridVisible) await ChiudiOverlay();
+    }
+
+    private async Task ChiudiOverlay()
+    {
+        await OnToggleOverlay.InvokeAsync();
+    }
+ 
+    // ★ Lista master per l'ordine delle colonne 
+    private static readonly List<string> _ordineColonneBackend = new()
+    {
+        "IdVeicolo", "Targa", "Telaio", "Disponibile", "UltUbicazione",
+        "Località", "Comune", "Provincia", "Regione", 
+        "ClienteUbicazione", "Proprietario", "Locatario", "Utilizzatore", "SubUtilizzatore", "MetodoAcquisizione", 
+        "Marca", "Modello", "Alimentazione", "Segmento",
+        "EsisteSuTrack", "OnlineEffettivo", "TipoSosta", "TipoSatTrack", "ModelloTrack", "MatricolaTrack",
+        "ContaKm", "IndirizzoGPS", "VelocitaGPS", "EventoGPS", "NggOffLine",
+        "DataScadenzaPremio", "DataProssimaRevisione", "DataScadenzaATP"
+    };
+
+    private class FilterState
+    {
+        public List<string> CategorieAttive { get; set; } = new();
+        public ARFilter FiltroAttuale { get; set; } = new();
+        public Dictionary<string, bool> CampiSelezionati { get; set; } = new();
+        public Dictionary<string, bool?> MostraTuttiStato { get; set; } = new();
+        public List<string> ColonneVisibili { get; set; } = new();
+    }
+
+    private List<string> GetSelectedColumnsWithFallback()
+    {
+        var colonne = filtroCorrente.CampiSelezionati
+            .Where(c => c.Value)
+            .Select(c => c.Key)
+            .ToList();
+
+        return colonne.Any() ? colonne : GetDefaultVisibleColumns();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var statoSalvato = await localStorage.GetItemAsync<FilterState>("filtroStatoAvanzato");
+            if (statoSalvato != null)
+            {
+                // Caricamento stato base
+                categorieAttive = new HashSet<string>(statoSalvato.CategorieAttive);
+                filtroCorrente = statoSalvato.FiltroAttuale ?? new ARFilter();
+
+                // Caricamento selezioni
+                filtroCorrente.CampiSelezionati = statoSalvato.CampiSelezionati ?? new Dictionary<string, bool>();
+                mostraTuttiStato = statoSalvato.MostraTuttiStato ?? new Dictionary<string, bool?>();
+
+                // Colonne visibili (da passare a CompactGrid)
+                colonneVisibili = statoSalvato.ColonneVisibili ?? GetDefaultVisibleColumns();
+            }
+            await CheckViewport();
+        }
+    }
+
+    private List<string> GetDefaultVisibleColumns() => new() { "Targa", "Marca", "Località", "Disponibile" };
+
+    private async Task GestisciClickCategoria(string categoria)
+    {
+        if (categorieAttive.Contains(categoria))
+        {
+            categorieAttive.Remove(categoria);
+        }
+        else
+        {
+            categorieAttive.Add(categoria);
+        }
+
+        // Aggiorna lo stato dei checkbox "Mostra tutti"
+        AggiornaStatiCheckboxCategorie();
+        await SalvaStato();
+        StateHasChanged();
+    }
+
+    private async Task GestisciSelezioneCampo(string campo)
+    {
+        if (campiSelezionati.Contains(campo))
+            campiSelezionati.Remove(campo);
+        else
+            campiSelezionati.Add(campo);
+
+        await SalvaStato();
+    }
+
+    public async Task ResettaTutto()
+    {
+        // Resetta filtri
+        filtroCorrente = new ARFilter();
+
+        // Resetta selezioni
+        categorieAttive.Clear();
+        mostraTuttiStato.Clear();
+        colonneVisibili = GetDefaultVisibleColumns();
+
+        // Resetta UI
+        foreach (var cat in CampiPerCategoria.Keys)
+        {
+            AggiornaStatoCheckboxCategoria(cat);
+        }
+
+        await SalvaStato();
+        StateHasChanged();
+    }
+
+    public async Task ResettaFiltri()
+    {
+        filtroCorrente = new ARFilter(); // Resetta tutti i campi testo
+        campiSelezionati.Clear();       // Deseleziona tutti i checkbox
+        categorieAttive.Clear();        // Chiude le categorie
+        await SalvaStato();             // Persiste il reset
+        StateHasChanged();              // Aggiorna UI
+    }
+
+    private async Task ApplicaFiltri()
+    {
+        try
+        {
+            filtroCorrente.OnlineEffettivo = _selectedOnlineStatus switch
+            {
+                OnlineStatus.SI => "SI",
+                OnlineStatus.NO => "NO",
+                _ => string.Empty  // Corrisponde a "(Tutti)"
+            };
+
+            isLoading = true;
+            ContextService.LastStaffFilterFormatted = GeneraQueryFiltri();
+            await SalvaStato();
+            ContextService.SelectedColumns = GetSelectedColumnsWithFallback();
+
+            List<ARVan> risultati = !filtroCorrente.HasFilters()
+                ? await ARService.GetVansAsync(new ARFilter())
+                : await ARService.GetVansAsync(filtroCorrente);
+
+            // Invio i risultati SOLO alla griglia (NON alla mappa)
+            await OnFiltriApplicati.InvokeAsync(risultati ?? new List<ARVan>());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Errore in ApplicaFiltri: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //filtroCorrente.DataScadenzaPremio = DateOnly.FromDateTime(DateTime.Today); 
+        base.OnInitialized();
+    }
+
+    private async Task SalvaStato()
+    {
+        var stato = new FilterState
+            {
+                CategorieAttive = categorieAttive.ToList(),
+                FiltroAttuale = filtroCorrente,
+                CampiSelezionati = filtroCorrente.CampiSelezionati,
+                MostraTuttiStato = mostraTuttiStato,
+                ColonneVisibili = GetSelectedColumnsWithFallback()
+            };
+
+        await localStorage.SetItemAsync("filtroStatoAvanzato", stato);
+    }
+
+    private async Task CheckViewport()
+    {
+        isMobile = await JSRuntime.InvokeAsync<bool>("isMobileDevice");
+        StateHasChanged();
+    }
+
+    private bool HasFilterValue(string campo)
+{
+    var value = filtroCorrente.GetType().GetProperty(campo)?.GetValue(filtroCorrente)?.ToString();
+    return !string.IsNullOrWhiteSpace(value);
+}
+
+    private bool IsCampoVisibile(string campo)
+    {
+        return campiDaMostrare.Contains(campo);
+    }
+
+    private void RimuoviCampiCategoria(string categoria)
+    {
+        if (CampiPerCategoria.TryGetValue(categoria, out var campi))
+            campiSelezionati.RemoveWhere(c => campi.Contains(c));
+    }
+
+    private void AggiungiCampiCategoria(string categoria)
+    {
+        if (CampiPerCategoria.TryGetValue(categoria, out var campi))
+            campiSelezionati.UnionWith(campi);
+    }
+
+    private void AggiornaStatoMaster(string campo)
+    {
+        var categoria = CampiPerCategoria.FirstOrDefault(x => x.Value.Contains(campo)).Key;
+        if (categoria != null)
+        {
+            var campiCategoria = CampiPerCategoria[categoria];
+            var selezionati = campiCategoria.Count(c =>
+                filtroCorrente.CampiSelezionati.TryGetValue(c, out var sel) && sel);
+
+            mostraTuttiStato[categoria] = selezionati switch
+            {
+                0 => false,
+                _ when selezionati == campiCategoria.Count => true,
+                _ => null
+            };
+        }
+    }
+
+    private void AggiornaStatiCheckboxCategorie()
+    {
+        foreach (var cat in CampiPerCategoria.Keys)
+        {
+            var tuttiSelezionati = CampiPerCategoria[cat]
+                .All(c => filtroCorrente.CampiSelezionati.GetValueOrDefault(c, false));
+
+            mostraTuttiStato[cat] = tuttiSelezionati ? true : false;
+        }
+    }
+
+    private void ToggleMostraTutti(string categoriaKey)
+    {
+        if (!CampiPerCategoria.ContainsKey(categoriaKey)) return;
+
+        // Ottieni lo stato corrente (con default false se null)
+        bool statoCorrente = mostraTuttiStato.TryGetValue(categoriaKey, out var stato) && stato == true;
+
+        // Inverti lo stato
+        bool nuovaSelezione = !statoCorrente;
+
+        // Applica a tutti i campi
+        foreach (var campo in CampiPerCategoria[categoriaKey])
+        {
+            filtroCorrente.CampiSelezionati[campo] = nuovaSelezione;
+        }
+
+        // Aggiorna lo stato (convertendo esplicitamente in bool?)
+        mostraTuttiStato[categoriaKey] = nuovaSelezione;
+        StateHasChanged();
+    }
+
+    private void ToggleSelezioneCampo(string campo)
+    {
+        if (filtroCorrente.CampiSelezionati.ContainsKey(campo))
+        {
+            filtroCorrente.CampiSelezionati[campo] = !filtroCorrente.CampiSelezionati[campo];
+            AggiornaStatoMaster(campo);
+        }
+    }
+
+    private void AggiornaFiltro(string campo, string? valore)
+    {
+        var prop = filtroCorrente.GetType().GetProperty(campo);
+
+        if (prop == null) return;
+
+        // Gestione speciale per DateOnly?
+        if (prop.PropertyType == typeof(DateOnly?))
+        {
+            if (string.IsNullOrEmpty(valore))
+            {
+                prop.SetValue(filtroCorrente, null);
+            }
+            else if (DateOnly.TryParse(valore, out var data))
+            {
+                prop.SetValue(filtroCorrente, data);
+            }
+            return;
+        }
+
+        // Gestione normale per altri tipi
+        prop?.SetValue(filtroCorrente, valore);
+    }
+
+    private void ToggleCampoSelezionato(string campo)
+    {
+        var currentValue = filtroCorrente.CampiSelezionati.GetValueOrDefault(campo, false);
+        filtroCorrente.CampiSelezionati[campo] = !currentValue;
+
+        // Aggiorna lo stato "Mostra tutti" della categoria
+        var categoria = CampiPerCategoria.FirstOrDefault(x => x.Value.Contains(campo)).Key;
+        if (categoria != null)
+        {
+            AggiornaStatoCheckboxCategoria(categoria);
+        }
+    }
+
+    private void AggiornaStatoCheckboxCategoria(string categoria)
+    {
+        var tuttiSelezionati = CampiPerCategoria[categoria]
+            .All(c => filtroCorrente.CampiSelezionati.GetValueOrDefault(c, false));
+
+        var nessunoSelezionato = CampiPerCategoria[categoria]
+            .All(c => !filtroCorrente.CampiSelezionati.GetValueOrDefault(c, false));
+
+        mostraTuttiStato[categoria] = tuttiSelezionati ? true :
+                                     nessunoSelezionato ? false : null;
+    }
+
+    private string OttieniEtichetta(string campo)
+    {
+        return campo switch
+        {
+            //
+            // DATI BASE
+            //
+            "IdVeicolo" => "ID Veicolo",
+            "Disponibile" => "Stato Veicolo",
+            "UltUbicazione" => "Ultima Ubicazione",
+
+            //
+            // COMMERCIALE
+            //
+            "SubUtilizzatore" => "Sub Utilizzatore",
+            "MetodoAcquisizione" => "Metodo Acquisizione",
+
+            //
+            // MANUTENZIONE
+            //
+            "DataScadenzaPremio" => "Data Scad. Premio",
+            "DataProssimaRevisione" => "Data Pross. Revisione",
+            "DataScadenzaATP" => "Data Scad. ATP",
+
+            //
+            // TRACCIAMENTO GPS
+            //
+            "EsisteSuTrack" => "Veicoli monitorati",
+            "OnlineEffettivo" => "On Line",
+            "TipoSosta" => "Stato Sosta",
+            "TipoSatTrack" => "Fornitore GPS",
+            "ModelloTrack" => "Modello GPS",
+            "MatricolaTrack" => "Matricola GPS",
+            "ContaKm" => "Odometro",
+            "VelocitaGPS" => "Velocità",
+            "EventoGPS" => "Evento",
+            "IndirizzoGPS" => "Indirizzo",
+            "NggOffLine" => "N. gg. offline",
+
+            _ => campo
+        };
+    }
+
+    private string CostruisciQuery()
+    {
+        var filtri = new List<string>();
+        foreach (var campo in campiSelezionati)
+        {
+            var prop = typeof(ARFilter).GetProperty(campo);
+            var valore = prop?.GetValue(filtroCorrente)?.ToString();
+            if (!string.IsNullOrEmpty(valore))
+                filtri.Add($"{campo}: {valore}");
+        }
+        return string.Join(", ", filtri);
+    }
+
+    private string GetMostraTuttiIcon(string categoriaKey)
+    {
+        if (!mostraTuttiStato.TryGetValue(categoriaKey, out var stato))
+            return "◻"; // Quadrato vuoto (stato iniziale)
+
+        return stato == true ? "☑" :
+                stato == false ? "◻" :
+                "◼"; // Quadrato pieno per stato indeterminato
+    }
+
+    private string GetStileAltezza()
+    {
+        var height = "80vh";
+        if (isMobile)
+        {
+            height = "auto";
+        }
+        return $"height: {height}; max-height: {(isMobile ? "300px" : "800px")};";
+    }
+
+    private string GeneraQueryFiltri()
+    {
+        var queryParts = new List<string>();
+
+        // Solo proprietà stringa (ignora CampiSelezionati)
+        var props = typeof(ARFilter).GetProperties()
+            .Where(p => p.PropertyType == typeof(string));
+
+        foreach (var prop in props)
+        {
+            var value = prop.GetValue(filtroCorrente) as string;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                queryParts.Add($"{prop.Name}: {value}");
+            }
+        }
+
+        return string.Join(", ", queryParts);
+    }
+
+    private bool IsNumericField(string campo)
+    {
+        var prop = filtroCorrente.GetType().GetProperty(campo);
+        return prop?.PropertyType == typeof(int?) || prop?.PropertyType == typeof(int);
+    }
+
+    private string GetNumericFieldValue(string campo)
+    {
+        var value = filtroCorrente.GetType().GetProperty(campo)?.GetValue(filtroCorrente);
+        return value?.ToString() ?? "";
+    }
+
+    private void HandleNumericInput(string campo, string? value)
+    {
+        var prop = filtroCorrente.GetType().GetProperty(campo);
+        if (prop == null) return;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            prop.SetValue(filtroCorrente, null);
+        }
+        else if (int.TryParse(value, out int numericValue))
+        {
+            prop.SetValue(filtroCorrente, numericValue);
+        }
+    }
+
+    private bool GetCheckedValue(string campo)
+    {
+        if (campo == "EsisteSuTrack")
+            return filtroCorrente.EsisteSuTrack ?? false;
+
+        if (campo == "OnlineEffettivo")
+            return filtroCorrente.OnlineEffettivo == "false";
+
+        return false;
+    }
+
+    private void HandleToggleChange(string campo, object? value)
+    {
+        var isChecked = value as bool? ?? false;
+
+        switch (campo)
+        {
+            case "EsisteSuTrack":
+                filtroCorrente.EsisteSuTrack = isChecked;
+                if (!isChecked)
+                {
+                    filtroCorrente.OnlineEffettivo = string.Empty; // Invece di null
+                }
+                break;
+
+            case "OnlineEffettivo":
+                filtroCorrente.OnlineEffettivo = isChecked ? "false" : string.Empty;
+                break;
+        }
+
+        StateHasChanged();
+    }
+}

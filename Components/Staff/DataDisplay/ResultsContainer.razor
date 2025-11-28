@@ -1,0 +1,25 @@
+﻿@namespace VanGest.Server.Components.Staff
+@using VanGest.Server.Models.Filters
+@inject IContextService ContextService
+
+<div class="staff-results-container">
+    @if (InitialData != null && InitialData.Any())
+    {
+        <CompactGrid Data="@InitialData"
+                     VisibleColumns="@VisibleColumns"
+                     OnDeleteRequested="HandleDeleteResult" />
+    }
+</div>
+
+@code {
+    [Parameter]     public List<ARVan>? InitialData { get; set; }
+
+    [Parameter]     public List<string>? VisibleColumns { get; set; }
+
+    [Parameter]     public EventCallback<int> OnDeleteRequested { get; set; }
+
+    private async Task HandleDeleteResult(int itemId)
+    {
+        await OnDeleteRequested.InvokeAsync(itemId);
+    }
+}

@@ -1,0 +1,189 @@
+﻿
+/* CONTENITORE PRINCIPALE */
+.compact-grid {
+    border-radius: 8px;
+    margin: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: white;
+    overflow: hidden;
+}
+
+/* INTESTAZIONE CONTROLLI */
+.grid-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.result-count {
+    font-weight: 500;
+    color: #495057;
+}
+
+.grid-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 0.5rem;
+}
+
+/* ---------------------------
+  SCROLLBAR PERSONALIZZATA
+/---------------------------*/
+.grid-scroll-container {
+    height: calc(100vh - 200px); /* Regola 200px in base all'header/footer */
+    min-height: 300px; /* Altezza minima di fallback */
+    overflow: auto; /* Mantieni scroll esistente */
+    width: 100%; /* Conserva larghezza attuale */
+}
+
+.grid-body {
+    max-height: 200px;
+}
+
+.grid-scroll-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.grid-scroll-container::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+
+
+/* ---------------------
+      DATA-GRID
+/---------------------*/
+.data-grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+    .data-grid th {
+        position: sticky;
+        top: 0;
+        background: #e9ecef;
+        padding: 0.5rem 1rem;
+        text-align: left;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .data-grid td {
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: top;
+    }
+
+.data-grid {
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+    .data-grid th, .data-grid td {
+        padding: 8px;
+        border: 1px solid #ddd;
+        overflow: hidden;
+    }
+
+/* ---------------------
+  TESTO DELLA DATA-GRID
+/---------------------*/
+
+.cell-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+}
+
+/* Tooltip naturale del browser */
+[title] {
+    position: relative;
+}
+
+
+/* Overlay di caricamento */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255,255,255,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* sopra tutto */
+}
+
+.loading-spinner {
+    border: 8px solid #f3f3f3; /* Light grey */
+    border-top: 8px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+.results-grid-container {
+    width: 70%;
+    float: left;
+    padding-right: 15px;
+    transition: width 0.3s ease;
+}
+
+    .results-grid-container.filter-open {
+        width: 70%;
+        opacity: 0.9;
+    }
+
+
+/* Mobile */
+@media (max-width: 768px) {
+    .advanced-filter-overlay {
+        width: 100%;
+    }
+
+    .results-grid-container {
+        width: 100% !important;
+        padding-right: 0;
+    }
+}
+
+/* Clearfix per il float */
+.staff-container::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+

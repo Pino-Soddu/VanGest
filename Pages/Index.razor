@@ -1,0 +1,258 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using System.Net.Http.Json
+@using VanGest.Server.Components.Chat
+@using VanGest.Server.Models
+@using VanGest.Server.Models.Filters
+@using VanGest.Server.Services
+@using VanGest.Server.Models.Login
+@using VanGest.Server.Services.Auth
+@using VanGest.Server.Services.Vans
+@using VanGest.Enums
+@inject IHttpClientFactory HttpClientFactory
+@inject IAuthService AuthService
+@inject IVanService VanService
+@inject IContextService ContextService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<link href="VanGest.Server.styles.css" rel="stylesheet" />
+
+<div class="header-wrapper">
+    <!-- Versione ORIGINALE per clienti -->
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                <img src="/images/vanrental-logo.png" class="header-logo" />
+            </td>
+            <td class="text-cell">
+                <h1>Benvenuto in VanRental di Partner Rent Swiss SA</h1>
+                <p class="subtitle">Prenota il tuo furgone con il nostro assistente virtuale</p>
+            </td>
+        </tr>
+    </table>
+
+    <div class="header-actions">
+        <!-- Icona Area Riservata -->
+        <div class="reserved-area" @onclick="ToggleLoginPanel">
+            <img src="/icons/shield.svg" class="header-icon" />
+            <span>Area Riservata</span>
+        </div>
+    </div>
+</div>
+
+<div class="chat-container">
+    @if (!showLoginPanel)
+    {
+        <ChatComponent @ref="chatComponent" />
+    }
+    else
+    {
+        <div class="login-container">
+            <div class="login-panel">
+                <h3>Accesso Area Riservata</h3>
+                <EditForm Model="@LoginRequest" OnValidSubmit="AvviaLogin">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label>Username</label>
+                        <InputText @bind-value="LoginRequest.Username" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <InputText type="password" @bind-value="LoginRequest.Password" class="form-control" />
+                    </div>
+                    <div class="login-buttons">
+                        <button type="submit" class="btn btn-primary">Accedi</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelLogin">Annulla</button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(loginError))
+                    {
+                        <div class="alert alert-danger">@loginError</div>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@if (showVanSection)
+{
+    <div class="vans-container">
+        @if (isLoading)
+        {
+            <div class="loading-indicator">
+                <div class="spinner"></div>
+                <span>Ricerca furgoni in corso...</span>
+            </div>
+        }
+        else if (totalVans >= 0)
+        {
+            <div class="van-summary">
+                @if (totalVans > 0)
+                {
+                    <span class="badge-count">@totalVans</span> <span>furgoni disponibili</span>
+                }
+                else
+                {
+                    <span class="no-results">Nessun furgone disponibile con i criteri selezionati</span>
+                }
+            </div>
+
+            <div class="van-table-container">
+                <table class="van-table">
+                    <thead>
+                        <tr>
+                            <th>Foto</th>
+                            <th>Modello</th>
+                            <th>Località</th>
+                            <th>Stato</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var van in vans!)
+                        {
+                            <tr>
+                                <td class="van-image-cell">
+                                    <img src="@van.ImageUrl" alt="@van.Marca @van.Modello" class="van-table-image" />
+                                </td>
+                                <td>@van.Marca @van.Modello</td>
+                                <td>📍 @van.Località, @van.Provincia</td>
+                                <td>
+                                    <span class="van-status @van.Disponibile.ToLower()">
+                                        @(van.Disponibile == "SI" ? "Disponibile" : "Non disponibile")
+                                    </span>
+                                </td>
+                                <td class="van-actions-cell">
+                                    <button class="btn-table-action" @onclick="() => ShowVanDetails(van.IdVeicolo)">
+                                        <img src="/icons/info.svg" alt="Dettagli" />
+                                    </button>
+                                    <button class="btn-table-action" @onclick="() => StartBooking(van.IdVeicolo)">
+                                        <img src="/icons/calendar-check.svg" alt="Prenota" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+
+@code {
+    private List<Van>? vans;
+    //private List<ARVan>? filteredVans;
+    private ChatComponent? chatComponent;
+    //private AdvancedFilter? advancedFilterComponent;
+    private int totalVans = -1;
+    private bool isLoading;
+    private bool showVanSection;
+    private bool isFiltersOverlayOpen = false;
+    private bool showLoginPanel = false;
+    private string loginError = string.Empty;
+    private bool IsAuthenticated = false;
+    private string UserUserName = string.Empty;
+    private int? UserId = null;
+    private LoginRequest LoginRequest = new();
+
+    private void ToggleFiltersOverlay() => isFiltersOverlayOpen = !isFiltersOverlayOpen;
+
+    private bool isStaffMode =>
+        ContextService.ContestoAttuale == ContestoApplicativo.StaffFiltri ||
+        ContextService.ContestoAttuale == ContestoApplicativo.StaffLocalita;
+
+    private void ResetGrid()
+    {
+        //filteredVans = null;
+        showVanSection = false;
+        StateHasChanged();
+    }
+
+    private void ToggleLoginPanel()
+    {
+        if (!IsAuthenticated)
+        {
+            showLoginPanel = !showLoginPanel;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AvviaLogin()
+    {
+        loginError = string.Empty;
+        StateHasChanged();
+
+        var result = await AuthService.Authenticate(LoginRequest);
+        if (result.Success)
+        {
+            IsAuthenticated = true;
+            UserUserName = result.UserName ?? "";
+            UserId = result.UserId;
+            showLoginPanel = false;
+            Navigation.NavigateTo("/staff");
+        }
+        else
+        {
+            loginError = result.Message ?? "Credenziali non valide";
+            StateHasChanged();
+        }
+    }
+
+    private void CancelLogin()
+    {
+        showLoginPanel = false;
+        loginError = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task LoadVansFromFilter(VanFilter filter)
+    {
+        showVanSection = true;
+        isLoading = true;
+        totalVans = -1;
+        StateHasChanged(); // Aggiorna l'UI per lo stato di caricamento
+
+        try
+        {
+            // SOSTITUISCE LA CHIAMATA HTTP CON IL SERVIZIO
+            vans = await VanService.GetVansAsync(filter);
+            totalVans = vans.Count;
+        }
+        catch
+        {
+            vans = new List<Van>();
+            totalVans = 0;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Aggiorna l'UI a completamento
+        }
+    }
+
+    private void ShowVanDetails(int vanId)
+    {
+        // Logica dettagli
+    }
+
+    private void StartBooking(int vanId)
+    {
+        // Logica prenotazione
+    }
+
+    protected override void OnInitialized()
+    {
+        ContextService.OnContestoCambiato += StateHasChanged;
+        base.OnInitialized();
+    }
+
+    public void Dispose()
+    {
+        ContextService.OnContestoCambiato -= StateHasChanged;
+    }
+
+}
+
