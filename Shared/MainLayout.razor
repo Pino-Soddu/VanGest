@@ -1,14 +1,72 @@
 ﻿@inherits LayoutComponentBase
-@inject NavigationManager NavigationManager
+@implements IDisposable
+@inject NavigationManager Navigation
 
-<ModalContainer /> <!-- Deve essere PRIMA del layout principale -->
+<div class="page-container">
+    <!-- HEADER MINIMAL - Solo logo + 2 pulsanti + chat -->
+    <header class="main-header">
+        <div class="header-content">
+            <!-- Solo LOGO (senza testo) -->
+            <div class="header-brand">
+                <img src="images/VanGestLogo.png"
+                     alt="VanGest Logo"
+                     class="header-logo" />
+            </div>
 
-<div class="layout-root">
-    @Body
+            <!-- Pulsanti centrali AREA CLIENTI / AREA STAFF -->
+            <div class="header-center-actions">
+                <!-- CAMBIA: da <a> a <button> con Navigation.NavigateTo -->
+                <button @onclick="() => GoToLogin(false)" class="header-center-btn clienti-btn">
+                    <i class="fas fa-user"></i>
+                    <span class="btn-text">Area Clienti</span>
+                </button>
+
+                <button @onclick="() => GoToLogin(true)" class="header-center-btn staff-btn">
+                    <i class="fas fa-briefcase"></i>
+                    <span class="btn-text">Area Staff</span>
+                </button>
+            </div>
+
+            <!-- Pulsante Chat a destra -->
+            <div class="header-right-actions">
+                <button class="header-chat-btn" @onclick="ToggleChat" title="Chat Assistenza">
+                    <i class="fas fa-comments"></i>
+                    <span class="btn-text">@(showChat ? "Chiudi" : "Chat")</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <div class="content-container">
+            @Body
+        </div>
+    </main>
+
+    <!-- CHAT OVERLAY -->
+    <ChatComponent @bind-IsVisible="showChat" />
 </div>
 
-<style>
-    .layout-root {
-        display: contents;
+@code {
+    // Stato chat
+    private bool showChat = false;
+
+    // Toggle chat
+    private void ToggleChat()
+    {
+        showChat = !showChat;
     }
-</style>
+
+    // AGGIUNGI QUESTO METODO
+    private void GoToLogin(bool forStaff)
+    {
+        // Usa forceLoad: true per forzare il reload della pagina
+        Navigation.NavigateTo($"/?showLogin=true&forStaff={forStaff}", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        // Cleanup
+    }
+}
