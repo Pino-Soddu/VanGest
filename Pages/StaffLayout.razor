@@ -1,0 +1,43 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+
+<div class="staff-layout-container">
+    <!-- HEADER UNIFORME con gradient blu Lazio -->
+    <header class="main-header">
+        <div class="header-content">
+            <!-- Logo (stesso della homepage) -->
+            <div class="header-brand">
+                <img src="images/VanGestLogo.png"
+                     alt="VanGest Logo"
+                     class="header-logo" />
+            </div>
+
+            <!-- Spazio centrale (per eventuale titolo o breadcrumb) -->
+            <div class="header-center-actions">
+                <span class="staff-header-title">
+                    Area Riservata Staff
+                </span>
+            </div>
+
+            <!-- Pulsanti destra (Logout/Profilo) -->
+            <div class="header-right-actions">
+                <button class="header-chat-btn" @onclick="GoToHomepage" title="Torna alla Home">
+                    <i class="fas fa-home"></i>
+                    <span class="btn-text">Home</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENUTO PRINCIPALE (senza padding extra) -->
+    <main class="staff-main-content">
+        @Body
+    </main>
+</div>
+
+@code {
+    private void GoToHomepage()
+    {
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

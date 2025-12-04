@@ -1,258 +1,476 @@
 ﻿@page "/"
+@layout MainLayout
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Primitives
 @using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Web
-@using System.Net.Http.Json
-@using VanGest.Server.Components.Chat
-@using VanGest.Server.Models
-@using VanGest.Server.Models.Filters
 @using VanGest.Server.Services
-@using VanGest.Server.Models.Login
 @using VanGest.Server.Services.Auth
-@using VanGest.Server.Services.Vans
-@using VanGest.Enums
-@inject IHttpClientFactory HttpClientFactory
-@inject IAuthService AuthService
-@inject IVanService VanService
-@inject IContextService ContextService
+@using VanGest.Server.Models.Login
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject IAuthService AuthService
+@inject IJSRuntime JS
 
-<link href="VanGest.Server.styles.css" rel="stylesheet" />
+<PageTitle>Partner SAT - Noleggio Furgoni</PageTitle>
 
-<div class="header-wrapper">
-    <!-- Versione ORIGINALE per clienti -->
-    <table class="header-table">
-        <tr>
-            <td class="logo-cell">
-                <img src="/images/vanrental-logo.png" class="header-logo" />
-            </td>
-            <td class="text-cell">
-                <h1>Benvenuto in VanRental di Partner Rent Swiss SA</h1>
-                <p class="subtitle">Prenota il tuo furgone con il nostro assistente virtuale</p>
-            </td>
-        </tr>
-    </table>
-
-    <div class="header-actions">
-        <!-- Icona Area Riservata -->
-        <div class="reserved-area" @onclick="ToggleLoginPanel">
-            <img src="/icons/shield.svg" class="header-icon" />
-            <span>Area Riservata</span>
+<!-- Hero Section Full-width -->
+<section class="hero-section">
+    <div class="hero-overlay">
+        <div class="container">
+            <div class="row align-items-center min-vh-70">
+                <div class="col-lg-8 col-xl-7">
+                    <h1 class="hero-title">
+                        PARTNER SAT
+                        <span class="hero-subtitle d-block mt-2">
+                            La Tua Libertà su Quattro Ruote
+                        </span>
+                    </h1>
+                    <p class="hero-lead">
+                        Noleggio furgoni facile, veloce e conveniente.<br>
+                        Pronto quando hai bisogno, ovunque tu sia.<br>
+                        Servizio professionale con la qualità italiana.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="#flotta" class="btn btn-hero-primary">
+                            Scopri la Flotta
+                        </a>
+                        <a href="#preventivo" class="btn btn-hero-secondary">
+                            Richiedi Preventivo
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
 
-<div class="chat-container">
-    @if (!showLoginPanel)
-    {
-        <ChatComponent @ref="chatComponent" />
-    }
-    else
-    {
-        <div class="login-container">
-            <div class="login-panel">
-                <h3>Accesso Area Riservata</h3>
+<!-- Sezione Servizi -->
+<section class="services-section py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5 text-lazio-blue">
+            Perché Scegliere Partner SAT
+        </h2>
+
+        <div class="row g-4">
+            <!-- Card 1 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm hover-lift cnp-card">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-wrapper bg-lazio-light rounded-circle p-3 mb-3 mx-auto"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-lightning-charge-fill text-lazio-blue fs-3"></i>
+                        </div>
+                        <h5 class="card-title text-lazio-blue">Semplice & Veloce</h5>
+                        <p class="card-text text-muted">
+                            Prenota online in 2 minuti. Ritiro immediato in sede con
+                            documentazione digitale e zero burocrazia.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm hover-lift cnp-card">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-wrapper bg-lazio-light rounded-circle p-3 mb-3 mx-auto"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-truck-front-fill text-lazio-blue fs-3"></i>
+                        </div>
+                        <h5 class="card-title text-lazio-blue">Flotta Moderna</h5>
+                        <p class="card-text text-muted">
+                            Furgoni nuovi, impeccabili e sottoposti a manutenzione
+                            costante. Sicurezza certificata su ogni veicolo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm hover-lift cnp-card">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-wrapper bg-lazio-light rounded-circle p-3 mb-3 mx-auto"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-shield-check-fill text-lazio-blue fs-3"></i>
+                        </div>
+                        <h5 class="card-title text-lazio-blue">Sicuro 24/7</h5>
+                        <p class="card-text text-muted">
+                            Assistenza stradale sempre attiva e assicurazione
+                            completa inclusa. Siamo con te in ogni situazione.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm hover-lift cnp-card">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-wrapper bg-lazio-light rounded-circle p-3 mb-3 mx-auto"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-arrow-repeat text-lazio-blue fs-3"></i>
+                        </div>
+                        <h5 class="card-title text-lazio-blue">Flessibilità Totale</h5>
+                        <p class="card-text text-muted">
+                            Noleggio giornaliero, settimanale o mensile.
+                            Chilometraggio illimitato e modifiche gratuite.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Banner Chat DeepSeek -->
+<section class="chat-banner py-5 bg-lazio-blue text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-3">
+                    <i class="bi bi-robot me-2"></i>
+                    Hai domande? Chiedi alla nostra Chat AI!
+                </h3>
+                <p class="mb-0">
+                    Ottieni risposte immediate su disponibilità, prezzi,
+                    caratteristiche tecniche e documentazione richiesta.
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button class="btn btn-light btn-lg" @onclick="ToggleChatDaBanner">
+                    <i class="bi bi-chat-dots me-2"></i>
+                    @(chatAperta ? "Chiudi Chat" : "Avvia Chat")
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sezione Accessi Multipli -->
+<section class="access-section py-5" id="accessi">
+    <div class="container">
+        <h2 class="text-center mb-5 text-lazio-blue">
+            Accedi all'Area di Tuo Interesse
+        </h2>
+
+        <div class="row g-4 justify-content-center">
+            <!-- Cliente Occasionale -->
+            <div class="col-lg-4">
+                <div class="card h-100 border-lazio-blue border-2 shadow cnp-card">
+                    <div class="card-header bg-lazio-blue text-white text-center py-3">
+                        <i class="bi bi-person-circle fs-1"></i>
+                        <h4 class="mt-2 mb-0">Cliente Occasionale</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="card-text">
+                            Scopri la nostra offerta di noleggio. Chatta con l'AI
+                            per informazioni su disponibilità, prezzi e caratteristiche.
+                            Ideale per traslochi, trasporti occasionali e necessità temporanee.
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Informazioni immediate</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Preventivo personalizzato</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Prenotazione online</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 text-center p-4">
+                        <button class="btn btn-lazio-blue btn-lg w-100" @onclick="ToggleChatDaCard">
+                            <i class="bi bi-search me-2"></i> Scopri l'Offerta
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cliente con Noleggio Attivo -->
+            <div class="col-lg-4">
+                <div class="card h-100 border-lazio-blue border-2 shadow cnp-card">
+                    <div class="card-header bg-lazio-blue text-white text-center py-3">
+                        <i class="bi bi-key-fill fs-1"></i>
+                        <h4 class="mt-2 mb-0">Cliente Registrato</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="card-text">
+                            Accedi alla tua area personale per gestire il noleggio attivo.
+                            Controlla stato manutenzione, documenti, scadenze e storico.
+                            Assistenza dedicata per clienti in corso.
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Info manutenzione veicolo</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Documenti digitali</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Assistenza personalizzata</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 text-center p-4">
+                        <button class="btn btn-lazio-blue btn-lg w-100" @onclick="() => ShowLoginPanel(false)">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Accedi al Tuo Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Aziendale -->
+            <div class="col-lg-4">
+                <div class="card h-100 border-lazio-blue border-2 shadow cnp-card">
+                    <div class="card-header bg-lazio-blue text-white text-center py-3">
+                        <i class="bi bi-briefcase-fill fs-1"></i>
+                        <h4 class="mt-2 mb-0">Staff Aziendale</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="card-text">
+                            Area riservata per il personale Partner SAT. Gestione completa
+                            della flotta, clienti, prenotazioni e manutenzioni.
+                            Strumenti operativi e reportistica avanzata.
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Gestione flotta furgoni</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Amministrazione clienti</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i> Controllo operativo</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 text-center p-4">
+                        <button class="btn btn-lazio-blue btn-lg w-100" @onclick="() => ShowLoginPanel(true)">
+                            <i class="bi bi-shield-lock me-2"></i> Accesso Staff
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sezione Casi d'Uso -->
+<section class="use-cases py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5 text-lazio-blue">
+            Per Ogni Tua Esigenza
+        </h2>
+        <div class="row text-center g-4">
+            <div class="col-md-3">
+                <div class="p-3">
+                    <i class="bi bi-box-seam fs-1 text-lazio-blue"></i>
+                    <h5 class="mt-3">Traslochi</h5>
+                    <p class="text-muted">Perfetto per traslochi privati</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3">
+                    <i class="bi bi-building fs-1 text-lazio-blue"></i>
+                    <h5 class="mt-3">Consegne Aziendali</h5>
+                    <p class="text-muted">Logistica per le tue consegne</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3">
+                    <i class="bi bi-tools fs-1 text-lazio-blue"></i>
+                    <h5 class="mt-3">Artigiani</h5>
+                    <p class="text-muted">Supporto per professionisti</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3">
+                    <i class="bi bi-calendar-event fs-1 text-lazio-blue"></i>
+                    <h5 class="mt-3">Eventi</h5>
+                    <p class="text-muted">Allestimento e logistica eventi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sezione Login -->
+@if (showLoginPanel)
+{
+    <div style="position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index:1050;"
+         @onclick="CancelLogin">
+        <div style="width:100%; max-width:400px; padding:20px;" @onclick:stopPropagation="true">
+            <div style="background-color:white; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.3); overflow:hidden;">
+                <div style="background:linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color:white; padding:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:1.5rem; font-weight:600;">
+                        <i class="fas fa-@(isStaffLogin ? "briefcase" : "user") me-2"></i>
+                        @(isStaffLogin ? "Accesso Area Staff" : "Accesso Area Clienti")
+                    </h3>
+                    <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; padding:5px;" @onclick="CancelLogin">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
                 <EditForm Model="@LoginRequest" OnValidSubmit="AvviaLogin">
                     <DataAnnotationsValidator />
-                    <div class="form-group">
-                        <label>Username</label>
-                        <InputText @bind-value="LoginRequest.Username" class="form-control" />
+                    <div style="padding:25px;">
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500; color:#333;">Username o Email</label>
+                            <InputText @bind-Value="LoginRequest.Username"
+                                       style="width:100%; padding:12px 15px; border:2px solid #e0e0e0; border-radius:6px; font-size:1rem;" />
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500; color:#333;">Password</label>
+                            <InputText type="password" @bind-Value="LoginRequest.Password"
+                                       style="width:100%; padding:12px 15px; border:2px solid #e0e0e0; border-radius:6px; font-size:1rem;"
+                                       autocomplete="current-password" />
+                        </div>
+                        <div style="display:flex; gap:15px; margin-top:25px;">
+                            <button type="submit" class="btn btn-lazio-blue" disabled="@isLoggingIn"
+                                    style="flex:1; background:linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color:white; border:none; padding:12px 25px; border-radius:6px; font-weight:600; cursor:pointer;">
+                                @if (isLoggingIn)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Accesso in corso...</span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    <span>Accedi</span>
+                                }
+                            </button>
+                            <button type="button" class="btn btn-outline-lazio-blue" @onclick="CancelLogin"
+                                    style="flex:1; background:white; color:#2a5298; border:2px solid #2a5298; padding:12px 25px; border-radius:6px; font-weight:600; cursor:pointer;">
+                                Annulla
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(loginError))
+                        {
+                            <div style="background-color:#fee; border:1px solid #f5c6cb; color:#721c24; padding:12px 15px; border-radius:6px; margin-top:15px;">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                @loginError
+                            </div>
+                        }
                     </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <InputText type="password" @bind-value="LoginRequest.Password" class="form-control" />
-                    </div>
-                    <div class="login-buttons">
-                        <button type="submit" class="btn btn-primary">Accedi</button>
-                        <button type="button" class="btn btn-secondary" @onclick="CancelLogin">Annulla</button>
-                    </div>
-                    @if (!string.IsNullOrEmpty(loginError))
-                    {
-                        <div class="alert alert-danger">@loginError</div>
-                    }
                 </EditForm>
             </div>
         </div>
-    }
-</div>
-
-@if (showVanSection)
-{
-    <div class="vans-container">
-        @if (isLoading)
-        {
-            <div class="loading-indicator">
-                <div class="spinner"></div>
-                <span>Ricerca furgoni in corso...</span>
-            </div>
-        }
-        else if (totalVans >= 0)
-        {
-            <div class="van-summary">
-                @if (totalVans > 0)
-                {
-                    <span class="badge-count">@totalVans</span> <span>furgoni disponibili</span>
-                }
-                else
-                {
-                    <span class="no-results">Nessun furgone disponibile con i criteri selezionati</span>
-                }
-            </div>
-
-            <div class="van-table-container">
-                <table class="van-table">
-                    <thead>
-                        <tr>
-                            <th>Foto</th>
-                            <th>Modello</th>
-                            <th>Località</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var van in vans!)
-                        {
-                            <tr>
-                                <td class="van-image-cell">
-                                    <img src="@van.ImageUrl" alt="@van.Marca @van.Modello" class="van-table-image" />
-                                </td>
-                                <td>@van.Marca @van.Modello</td>
-                                <td>📍 @van.Località, @van.Provincia</td>
-                                <td>
-                                    <span class="van-status @van.Disponibile.ToLower()">
-                                        @(van.Disponibile == "SI" ? "Disponibile" : "Non disponibile")
-                                    </span>
-                                </td>
-                                <td class="van-actions-cell">
-                                    <button class="btn-table-action" @onclick="() => ShowVanDetails(van.IdVeicolo)">
-                                        <img src="/icons/info.svg" alt="Dettagli" />
-                                    </button>
-                                    <button class="btn-table-action" @onclick="() => StartBooking(van.IdVeicolo)">
-                                        <img src="/icons/calendar-check.svg" alt="Prenota" />
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
     </div>
 }
 
-
 @code {
-    private List<Van>? vans;
-    //private List<ARVan>? filteredVans;
-    private ChatComponent? chatComponent;
-    //private AdvancedFilter? advancedFilterComponent;
-    private int totalVans = -1;
-    private bool isLoading;
-    private bool showVanSection;
-    private bool isFiltersOverlayOpen = false;
+    // Variabili chat
+    private bool chatAperta = false;
+
+    // Variabili login
     private bool showLoginPanel = false;
+    private bool isStaffLogin = false;
+    private bool isLoggingIn = false;
     private string loginError = string.Empty;
-    private bool IsAuthenticated = false;
-    private string UserUserName = string.Empty;
-    private int? UserId = null;
-    private LoginRequest LoginRequest = new();
+    private LoginRequest LoginRequest { get; set; } = new LoginRequest();
 
-    private void ToggleFiltersOverlay() => isFiltersOverlayOpen = !isFiltersOverlayOpen;
-
-    private bool isStaffMode =>
-        ContextService.ContestoAttuale == ContestoApplicativo.StaffFiltri ||
-        ContextService.ContestoAttuale == ContestoApplicativo.StaffLocalita;
-
-    private void ResetGrid()
+    protected override void OnInitialized()
     {
-        //filteredVans = null;
-        showVanSection = false;
-        StateHasChanged();
+        // Leggi parametri URL
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+        Console.WriteLine($"URL: {uri}");
+        Console.WriteLine($"Query params: {string.Join(", ", queryParams.Select(kv => $"{kv.Key}={kv.Value}"))}");
+
+        if (queryParams.TryGetValue("showLogin", out StringValues showLogin))
+        {
+            if (showLogin.FirstOrDefault() == "true")
+            {
+                showLoginPanel = true;
+                Console.WriteLine("showLoginPanel = true");
+
+                // LEGGI E IMPOSTA isStaffLogin
+                if (queryParams.TryGetValue("forStaff", out StringValues forStaff))
+                {
+                    var forStaffValue = forStaff.FirstOrDefault();
+                    isStaffLogin = forStaffValue?.ToLower() == "true"; // Case-insensitive
+                    Console.WriteLine($"isStaffLogin = {isStaffLogin} (forStaff={forStaffValue})");
+                }
+                else
+                {
+                    Console.WriteLine("Parametro forStaff non trovato");
+                }
+            }
+        }
     }
 
-    private void ToggleLoginPanel()
+    // Metodi chat
+    private void ToggleChatDaCard()
     {
-        if (!IsAuthenticated)
-        {
-            showLoginPanel = !showLoginPanel;
-            StateHasChanged();
-        }
+        chatAperta = !chatAperta;
+    }
+
+    private void ToggleChatDaBanner()
+    {
+        chatAperta = !chatAperta;
+    }
+
+    // Metodi login
+    private void ShowLoginPanel(bool forStaff)
+    {
+        isStaffLogin = forStaff;  // IMPOSTA SUBITO
+        showLoginPanel = true;
+        loginError = string.Empty;
+        LoginRequest = new LoginRequest();
+        StateHasChanged(); // AGGIORNA IMMEDIATAMENTE L'UI
+    }
+
+    private async Task CancelLogin()
+    {
+        showLoginPanel = false;
+        loginError = string.Empty;
+        isLoggingIn = false;
+        await Task.CompletedTask;
     }
 
     private async Task AvviaLogin()
     {
+        isLoggingIn = true;
         loginError = string.Empty;
-        StateHasChanged();
-
-        var result = await AuthService.Authenticate(LoginRequest);
-        if (result.Success)
-        {
-            IsAuthenticated = true;
-            UserUserName = result.UserName ?? "";
-            UserId = result.UserId;
-            showLoginPanel = false;
-            Navigation.NavigateTo("/staff");
-        }
-        else
-        {
-            loginError = result.Message ?? "Credenziali non valide";
-            StateHasChanged();
-        }
-    }
-
-    private void CancelLogin()
-    {
-        showLoginPanel = false;
-        loginError = string.Empty;
-        StateHasChanged();
-    }
-
-    private async Task LoadVansFromFilter(VanFilter filter)
-    {
-        showVanSection = true;
-        isLoading = true;
-        totalVans = -1;
-        StateHasChanged(); // Aggiorna l'UI per lo stato di caricamento
 
         try
         {
-            // SOSTITUISCE LA CHIAMATA HTTP CON IL SERVIZIO
-            vans = await VanService.GetVansAsync(filter);
-            totalVans = vans.Count;
+            // Usa il servizio Auth originale
+            var result = await AuthService.Authenticate(LoginRequest);
+
+            if (result.Success)
+            {
+                showLoginPanel = false;
+
+                // Salva il token se presente
+                if (!string.IsNullOrEmpty(result.Token))
+                {
+                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+                }
+
+                // Redirect alla pagina appropriata basata sul ruolo dell'utente
+                // Verifica se esiste l'utente e il suo ruolo
+                // Redirect alla pagina appropriata
+                if (!string.IsNullOrEmpty(result.Token))
+                {
+                    showLoginPanel = false;
+
+                    // Salva il token se presente
+                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+
+                    // NOTA: La logica di reindirizzamento basata sul ruolo dovrebbe essere gestita diversamente
+                    // Il tuo LoginResponse non contiene informazioni sul ruolo
+
+                    // Per ora, reindirizza basandoti su isStaffLogin
+                    if (isStaffLogin)
+                    {
+                        Navigation.NavigateTo("/staff", forceLoad: true);
+                    }
+                    else
+                    {
+                        // Per clienti, reindirizza alla dashboard clienti o alla home
+                        // Dovrai eventualmente ottenere il ruolo dell'utente da un'altra API
+                        Navigation.NavigateTo("/cliente", forceLoad: true);
+                    }
+                }
+            }
+            else
+            {
+                // Usa Message invece di Error (come nel modello originale)
+                loginError = result.Message ?? "Credenziali non valide";
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            vans = new List<Van>();
-            totalVans = 0;
+            loginError = $"Errore di connessione: {ex.Message}";
         }
         finally
         {
-            isLoading = false;
-            StateHasChanged(); // Aggiorna l'UI a completamento
+            isLoggingIn = false;
         }
     }
-
-    private void ShowVanDetails(int vanId)
-    {
-        // Logica dettagli
-    }
-
-    private void StartBooking(int vanId)
-    {
-        // Logica prenotazione
-    }
-
-    protected override void OnInitialized()
-    {
-        ContextService.OnContestoCambiato += StateHasChanged;
-        base.OnInitialized();
-    }
-
-    public void Dispose()
-    {
-        ContextService.OnContestoCambiato -= StateHasChanged;
-    }
-
 }
-

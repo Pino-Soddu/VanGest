@@ -1,12 +1,16 @@
-﻿/* STAFF LAYOUT SPECIFICO */
+﻿/* ======================================================= */
+/* STAFF LAYOUT SPECIFICO                                 */
+/* ======================================================= */
+
 .staff-layout-container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    height: 100vh;
-    overflow: hidden;
+    height: 100vh; /* AGGIUNTO: Altezza fissa viewport */
+    overflow: hidden; /* AGGIUNTO: Previene scroll esterno */
 }
 
+    /* Header uniforme (stesso gradient homepage) */
     .staff-layout-container .main-header {
         background: linear-gradient(135deg, var(--lazio-celeste-dark) 0%, var(--lazio-celeste) 100%);
         color: white;
@@ -19,6 +23,7 @@
         z-index: 1000;
     }
 
+/* Titolo staff nel header */
 .staff-header-title {
     color: white;
     font-size: 1.2rem;
@@ -26,15 +31,17 @@
     opacity: 0.9;
 }
 
+/* Contenuto principale staff */
 .staff-main-content {
     flex-grow: 1;
     margin: 0;
     padding: 0;
-    background-color: #ff0000; /* DEBUG: colore rosso */
+    background-color: var(--lazio-gray-light);
     overflow-y: auto;
-    height: calc(100vh - 60px);
+    height: calc(100vh - 60px); /* AGGIUNTO: Sottrae altezza header */
 }
 
+/* Pulsante Home nello staff */
 .staff-layout-container .header-chat-btn {
     background: rgba(255, 255, 255, 0.15);
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -45,23 +52,25 @@
         background: rgba(255, 255, 255, 0.25);
     }
 
-/* CORREZIONI ALTEZZA STAFF INTERFACE */
+/* ======================================================= */
+/* CORREZIONI ALTEZZA STAFF INTERFACE                     */
+/* ======================================================= */
+
+/* Container principale staff tabs */
 .staff-tabs {
-    margin-top: 0 !important;
-    border-radius: 8px;
-    /* RIMUOVI: overflow: hidden; */
+    overflow: hidden;
     background: #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    height: 100%; /* AGGIUNTO: Occupa tutto lo spazio disponibile */
 }
 
+/* Nascondi vecchia intestazione (se ancora nel HTML) */
 .staff-header-wrapper {
     display: none !important;
 }
 
+/* Tab header */
 .tab-header {
     display: flex;
     justify-content: flex-start;
@@ -95,23 +104,24 @@
             color: white;
         }
 
+/* Contenuto dei tab */
 .tab-body {
     padding: 0.2rem;
-    flex-grow: 1; /* OCCUPA SPAZIO RESIDUO */
-    display: flex; /* ATTIVA FLEXBOX */
-    flex-direction: column; /* DISPOSIZIONE VERTICALE */
-    min-height: 0; /* IMPORTANTE: permette al figlio di ridursi */
+    height: calc(100% - 50px); /* AGGIUNTO: Sottrae altezza tab-header */
 }
 
+/* Layout contenitore principale */
 .filters-grid-container {
     display: flex;
-    height: 100%; /* Ora 100% di .tab-body che ha altezza definita */
-    flex-grow: 1; /* OCCUPA TUTTO LO SPAZIO DISPONIBILE */
-    min-height: 0; /* PERMETTE RIDIMENSIONAMENTO */
+    height: 100% !important; /* MODIFICATO: Da calc(100vh - 180px) a 100% */
+    padding-right: 0 !important;
+    margin-right: 0 !important;
 }
 
+/* Colonna Griglia */
 .grid-column {
     width: 100%;
+    height: 100%; /* AGGIUNTO */
     transition: all 0.3s ease;
 }
 
@@ -122,12 +132,15 @@
         background: rgba(255, 255, 255, 0.7);
     }
 
+/* Colonna Filtri */
 .filters-column {
     width: 20%;
     border-left: 1px solid #e2e8f0;
     background: #f8fafc;
+    height: 100%; /* AGGIUNTO */
 }
 
+/* Versione sovrapposta filtri */
 .filters-grid-container .filters-column {
     position: absolute;
     right: 0;
@@ -139,6 +152,7 @@
     transition: transform 0.3s ease;
 }
 
+/* Messaggio griglia vuota */
 .empty-grid-message {
     padding: 2rem;
     text-align: center;

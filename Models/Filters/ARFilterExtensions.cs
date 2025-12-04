@@ -15,7 +15,7 @@
 
             // Filtri speciali (formattazione custom)
             if (filter.ContaKm != null)
-                queryParts.Add($"ContaKm: {FormatNumberFilter(filter.ContaKm)}");
+                queryParts.Add($"ContaKm: {FormatNumberFilter(filter.ContaKm.Value.ToString())}");
 
             if (filter.DataProssimaRevisione.HasValue)
                 queryParts.Add($"DataProssimaRevisione: {FormatDateFilter(filter.DataProssimaRevisione.Value)}");

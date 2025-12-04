@@ -1,6 +1,6 @@
 ﻿@page "/staff"
 
-
+@layout StaffLayout
 @namespace VanGest.Server.Pages
 @using VanGest.Server.Components.Staff.DataDisplay
 @using VanGest.Server.Components.Staff.Localita
@@ -9,15 +9,6 @@
 @inject ILocalStorageService LocalStorage
 
 <div class="staff-tabs">
-    <!-- Testata StaffTabs.razor -->
-    <div class="staff-header-wrapper">
-        <div class="staff-header-content">
-            <img src="/images/vanrental-logo.png" class="staff-logo-compact"
-                 title="Area Riservata Staff" />
-            <span class="staff-title-compact">Area riservata per lo staff di VanGest</span>
-        </div>
-    </div>
-
     <!-- Tab Header -->
     <div class="tab-header">
         <button @onclick="@(() => SwitchTab("filtri"))"
