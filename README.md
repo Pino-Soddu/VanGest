@@ -221,6 +221,13 @@ L'applicazione supporta deployment su:
 # Clone repository
 git clone https://github.com/Pino-Soddu/VanGest.git
 
+
+## 🔧 Configurazione
+### 1. File di configurazione
+Copia il file di esempio e inserisci le tue chiavi:
+```bash
+cp appsettings.example.json appsettings.json
+
 # Configura appsettings.json
 cp appsettings.example.json appsettings.json
 
@@ -257,6 +264,6 @@ Per supporto o contributi, consultare le Issue o contattare il maintainer.
 
 Licenza: Proprietario - Partner SAT
 Versione: 1.0.0
-Ultimo aggiornamento: 2024
+Ultimo aggiornamento: 4/12/2025
 
 "La tua libertà su quattro ruote" 🚚💨
