@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    <div class="grid-scroll-container">
+    <div class="grid-scroll-container" style="max-height: @gridHeight">
         <table class="data-grid">
             <thead>
                 <tr>
@@ -147,19 +147,17 @@
     public bool IsFilterActive = false;
     private bool _mostraSoloAllarmi = false;
     private List<ARVan> _righeOriginali = new();
-
     private int ConteggioAllarmi =>
         (ColonneDateVisibili && Data != null)
             ? Data.Count(item => item?.HaAllarmi == true)
             : 0;
-
     private bool ColonneDateVisibili =>
         VisibleColumns?.Any(c =>
             c == nameof(ARVan.DataScadenzaPremio) ||
             c == nameof(ARVan.DataProssimaRevisione) ||
             c == nameof(ARVan.DataScadenzaATP)
         ) == true;
-
+    private string gridHeight = "500px";
     private List<string> GetOrderedColumns()
     {
         // 1. Filtra le colonne selezionate e mantieni l'ordine di CampiPerCategoria
@@ -180,9 +178,8 @@
 
         return orderedColumns;
     }
-
+    
     private string GetGridColorClass() => $"grid-color-{MessageId % 4}";
-
     private string GetColumnWidth(string column)
     {
         return column switch
@@ -215,7 +212,6 @@
             _ => "min-width: 200px;"
         };
     }
-
     private string GetHeaderText(string columnName)
     {
         return columnName switch
@@ -261,10 +257,19 @@
             _ => columnName
         };
     }
-
     private string GetFullValue(ARVan item, string property)
     {
         return item.GetType().GetProperty(property)?.GetValue(item)?.ToString() ?? "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var height = await JSRuntime.InvokeAsync<int>("getGridMaxHeight");
+            gridHeight = $"{height}px";
+            StateHasChanged();
+        }
     }
 
     private MarkupString FormatValue(ARVan item, string property)

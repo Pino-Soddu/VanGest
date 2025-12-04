@@ -38,9 +38,10 @@
 /---------------------------*/
 /* Contenitore della griglia con overflow orizzontale */
 .grid-scroll-container {
-    overflow-x: auto;
-    height: 63vh; /* Altezza dinamica: 60% dell'altezza della viewport */
-    max-height: 63vh; /* Aggiunto per sicurezza */
+    overflow: auto; /* Scorrimento sia orizzontale che verticale */
+    flex-grow: 1;
+    min-height: 0;
+    width: 100%;
 }
 
 /* La parte della griglia che deve essere scrollabile verticalmente */
