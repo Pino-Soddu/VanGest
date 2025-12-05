@@ -9,7 +9,7 @@ namespace VanGest.Server.Services
     public class ContextService : IContextService
     {
         private readonly ILocalStorageService _localStorage;
-        private ContestoApplicativo _contesto = ContestoApplicativo.Prenotazione;
+        private ContestoApplicativo _contesto = ContestoApplicativo.ClientiInfo;
 
         public ContextService(ILocalStorageService localStorage)
         {

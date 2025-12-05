@@ -1,18 +1,19 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
-using VanGest.Server.Models;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Memory;
-using System.Text;
-using System.Diagnostics;
-using System.Security.Cryptography;
 using System;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using VanGest.Enums;
+using VanGest.Server.Models;
 using VanGest.Server.Models.Filters;
 using VanGest.Server.Services;
-using VanGest.Enums;
-using Microsoft.AspNetCore.Hosting;
-using System.IO;
 
 namespace VanGest.Server.Services;
 
@@ -26,10 +27,10 @@ public class DeepSeekService : IDeepSeekService
     private const int CacheExpirationMinutes = 30;
     private readonly IWebHostEnvironment _env;
 
-    // 1. Aggiunto terzo prompt per località
-    private string _prenotazionePrompt = string.Empty;
-    private string _staffFiltriPrompt = string.Empty;
-    private string _staffLocalitaPrompt = string.Empty;
+    // Prompt principale
+    private string _clientiOccasionaliPrompt = string.Empty;
+    private string _clientiInfoPrompt = string.Empty;
+    private string _clientiPrenotazionePrompt = string.Empty;
 
     public DeepSeekService(
         HttpClient httpClient,
@@ -57,20 +58,24 @@ public class DeepSeekService : IDeepSeekService
         try
         {
             var promptPath = Path.Combine(_env.WebRootPath, "Prompt");
-            _prenotazionePrompt = File.ReadAllText(Path.Combine(promptPath, "PrenotazionePrompt.txt"));
-            _staffFiltriPrompt = File.ReadAllText(Path.Combine(promptPath, "StaffPrompt.txt"));
-            _staffLocalitaPrompt = File.ReadAllText(Path.Combine(promptPath, "StaffLocalitaPrompt.txt")); // 3. Nuovo prompt
+
+            // CARICA SOLO IL PROMPT PRINCIPALE
+            _clientiOccasionaliPrompt = File.ReadAllText(Path.Combine(promptPath, "PromptClientiOccasionali.txt"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Errore caricamento prompt");
-            // Fallback
-            _prenotazionePrompt = "# REGOLE PRENOTAZIONE\n- Mostra solo veicoli disponibili";
-            _staffFiltriPrompt = "# REGOLE STAFF\n- Mostra TUTTI i veicoli";
-            _staffLocalitaPrompt = "# REGOLE LOCALITÀ\n- Gestisci solo punti di noleggio"; // 4. Fallback per località
+
+            // FALLBACK SOLO PER CLIENTI
+            _clientiInfoPrompt = @"# ASSISTENTE INFORMAZIONI - PARTNER SAT
+RISPONDI IN TESTO PIANO SENZA FORMATTAZIONE.";
+
+            _clientiPrenotazionePrompt = @"# ASSISTENTE RICERCA - PARTNER SAT
+RESTITUISCI JSON CON: {""risposta_testo"":"""", ""filtri"":{}}";
+
+            // I CONTESTI STAFF NON HANNO FALLBACK PERCHÉ NON USANO DEEPSEEK
         }
     }
-
     public async Task<string> GetResponseAsync(
         string userMessage,
         List<ChatMessage>? conversationHistory = null,
@@ -88,13 +93,13 @@ public class DeepSeekService : IDeepSeekService
             var response = await ExecuteApiCallAsync(
                 userMessage,
                 conversationHistory ?? new List<ChatMessage>(),
-                ContestoApplicativo.Prenotazione); // 5. Contesto fisso per clienti
+                ContestoApplicativo.ClientiInfo); // 5. Contesto fisso per clienti
 
-            if (!IsValidResponse(response))
-            {
-                _logger.LogWarning("Risposta non valida dall'API");
-                return "{}";
-            }
+            //if (!IsValidResponse(response))
+            //{
+            //    _logger.LogWarning("Risposta non valida dall'API");
+            //    return "{}";
+            //}
 
             _cache.Set(cacheKey, response, TimeSpan.FromMinutes(CacheExpirationMinutes));
             return response;
@@ -112,27 +117,37 @@ public class DeepSeekService : IDeepSeekService
     {
         try
         {
-            _logger.LogInformation($"Richiesta: {request}");
-            var content = await ExecuteApiCallAsync(
-                request, new List<ChatMessage>(), contesto);
-            _logger.LogInformation($"Risposta API e Contenuto JSON da deserializzare: {content}");
+            var content = await ExecuteApiCallAsync(request, new List<ChatMessage>(), contesto);
 
-            return new DeepSeekResponse
+            // PER ClientiPrenotazione: JSON strutturato
+            if (contesto == ContestoApplicativo.ClientiPrenotazione)
             {
-                Answer = "Ecco i risultati:",
-                Filters = contesto switch
+                var jsonResponse = JsonSerializer.Deserialize<ClientiPrenotazioneResponse>(content);
+
+                return new DeepSeekResponse
                 {
-                    ContestoApplicativo.StaffFiltri =>
-                        JsonSerializer.Deserialize<ARFilter>(content) ?? new ARFilter(),
-                    ContestoApplicativo.StaffLocalita =>
-                        new ARFilter(), // 8. Placeholder per località
-                    _ =>
-                        JsonSerializer.Deserialize<VanFilter>(content) ?? new VanFilter()
-                
-                }
-
-            };
-
+                    Answer = jsonResponse?.RispostaTesto ?? "Cerco disponibilità per te!",
+                    Filters = jsonResponse?.Filtri ?? new VanFilter()
+                };
+            }
+            // PER ClientiInfo: logica esistente
+            else if (contesto == ContestoApplicativo.ClientiInfo)
+            {
+                return new DeepSeekResponse
+                {
+                    Answer = content,  // Solo testo
+                    Filters = new object()  // Nessun filtro
+                };
+            }
+            // Altri contesti (non ci interessano ora)
+            else
+            {
+                return new DeepSeekResponse
+                {
+                    Answer = "Contesto non gestito",
+                    Filters = new object()
+                };
+            }
         }
         catch (Exception ex)
         {
@@ -150,22 +165,46 @@ public class DeepSeekService : IDeepSeekService
         List<ChatMessage> history,
         ContestoApplicativo contesto)
     {
-        // 1. Prepara i messaggi per DeepSeek (invariato)
         var messages = PrepareMessages(userMessage, history, contesto);
 
-        // 2. Payload COMPLETO (come nella versione funzionante)
-        var payload = new
+        object payload;
+
+        // DETERMINA SE È CONVERSAZIONALE (testo) O TECNICO (JSON)
+        if (contesto == ContestoApplicativo.ClientiInfo)
         {
-            model = "deepseek-chat",
-            messages,
-            temperature = 0.3,
-            max_tokens = 150,
-            response_format = new { type = "json_object" }
-        };
+            // ClientiInfo: solo testo
+            payload = new
+            {
+                model = "deepseek-chat",
+                messages,
+                temperature = 0.3,
+                max_tokens = 400,
+                response_format = new { type = "json_object" }
+            };
+        }
+        else
+        {
+            // ClientiPrenotazione: JSON forzato
+            payload = new
+            {
+                model = "deepseek-chat",
+                messages,
+                temperature = 0.3,
+                max_tokens = 400,
+                response_format = new { type = "json_object" }
+            };
+        }
 
         try
         {
             var response = await _httpClient.PostAsJsonAsync(ApiUrl, payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Errore API: {response.StatusCode} - {errorContent}");
+            }
+
             response.EnsureSuccessStatusCode();
 
             var responseData = await response.Content.ReadFromJsonAsync<DeepSeekApiResponse>();
@@ -184,34 +223,65 @@ public class DeepSeekService : IDeepSeekService
         List<ChatMessage> history,
         ContestoApplicativo contesto)
     {
-        // 1. Carica il prompt base
         var systemPrompt = GetSystemPrompt(contesto);
 
-        var messages = new List<object>
+        // SOLO ClientiInfo deve essere solo testo
+        if (contesto == ContestoApplicativo.ClientiInfo)
         {
-            new
-            {
-                role = "system",
-                content = systemPrompt
-            },
-            new
-            {
-                role = "user",
-                content = userMessage
-            }
-        };
+            systemPrompt = "RISPONDI SEMPRE IN TESTO NORMALE (NON JSON). " + systemPrompt;
+        }
+        // ClientiPrenotazione PUÒ restituire JSON (se necessario)
 
-        messages.Add(new { role = "user", content = userMessage });
+        var messages = new List<object>
+    {
+        new { role = "system", content = systemPrompt },
+        new { role = "user", content = userMessage }
+    };
+
         return messages;
     }
 
+    public async Task<RispostaUnificata> GetRispostaUnificataAsync(string userMessage, ContestoApplicativo contesto)
+    {
+        try
+        {
+            var content = await ExecuteApiCallAsync(userMessage, new List<ChatMessage>(), contesto);
+            var risposta = JsonSerializer.Deserialize<RispostaUnificata>(content);
+
+            return risposta ?? new RispostaUnificata
+            {
+                Tipo = "info",
+                RispostaTesto = content,
+                Filtri = new VanFilter()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore in GetRispostaUnificataAsync");
+
+            return new RispostaUnificata
+            {
+                Tipo = "info",
+                RispostaTesto = "Errore nell'elaborazione. Riprova.",
+                Filtri = new VanFilter()
+            };
+        }
+    }
+    
     private string GetSystemPrompt(ContestoApplicativo contesto)
     {
+        // SOLO I CONTESTI CLIENTI USANO PROMPT
         var basePrompt = contesto switch
         {
-            ContestoApplicativo.StaffFiltri => _staffFiltriPrompt,
-            ContestoApplicativo.StaffLocalita => _staffLocalitaPrompt,
-            _ => _prenotazionePrompt
+            ContestoApplicativo.ClientiInfo => _clientiOccasionaliPrompt,
+            ContestoApplicativo.ClientiPrenotazione => _clientiOccasionaliPrompt,
+
+            // I CONTESTI STAFF NON USANO DEEPSEEK, QUINDI NON HANNO PROMPT
+            // Se per qualche motivo vengono chiamati, restituiamo stringa vuota
+            ContestoApplicativo.StaffFiltri => string.Empty,
+            ContestoApplicativo.StaffLocalita => string.Empty,
+
+            _ => _clientiInfoPrompt // Fallback su ClientiInfo
         };
 
         return basePrompt
@@ -229,7 +299,7 @@ public class DeepSeekService : IDeepSeekService
 
         var messagePart = Convert.ToHexString(sha256.ComputeHash(Encoding.UTF8.GetBytes(userMessage)));
 
-        return $"DS_{messagePart[..8]}_{historyPart[..8]}";
+        return $"DS_{messagePart.Substring(0, Math.Min(8, messagePart.Length))}_{historyPart.Substring(0, Math.Min(8, historyPart.Length))}";
     }
 
     private bool IsValidResponse(string response)
@@ -302,6 +372,15 @@ public class DeepSeekService : IDeepSeekService
     public class DeepSeekMessage
     {
         public string Content { get; set; } = string.Empty;
+    }
+
+    public class ClientiPrenotazioneResponse
+    {
+        [JsonPropertyName("risposta_testo")]
+        public string RispostaTesto { get; set; } = string.Empty;
+
+        [JsonPropertyName("filtri")]
+        public VanFilter Filtri { get; set; } = new VanFilter();
     }
 
 

@@ -6,6 +6,7 @@
 @using VanGest.Server.Services
 @using VanGest.Server.Services.Auth
 @using VanGest.Server.Models.Login
+using VanGest.Server.Components.Chat
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
 @inject IJSRuntime JS
@@ -341,6 +342,9 @@
     </div>
 }
 
+
+<ChatComponent @ref="chatComponent" @bind-IsVisible="chatAperta" />
+
 @code {
     // Variabili chat
     private bool chatAperta = false;
@@ -350,6 +354,7 @@
     private bool isStaffLogin = false;
     private bool isLoggingIn = false;
     private string loginError = string.Empty;
+    private ChatComponent? chatComponent;
     private LoginRequest LoginRequest { get; set; } = new LoginRequest();
 
     protected override void OnInitialized()
@@ -358,22 +363,22 @@
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var queryParams = QueryHelpers.ParseQuery(uri.Query);
 
-        Console.WriteLine($"URL: {uri}");
-        Console.WriteLine($"Query params: {string.Join(", ", queryParams.Select(kv => $"{kv.Key}={kv.Value}"))}");
+        //Console.WriteLine($"URL: {uri}");
+        //Console.WriteLine($"Query params: {string.Join(", ", queryParams.Select(kv => $"{kv.Key}={kv.Value}"))}");
 
         if (queryParams.TryGetValue("showLogin", out StringValues showLogin))
         {
             if (showLogin.FirstOrDefault() == "true")
             {
                 showLoginPanel = true;
-                Console.WriteLine("showLoginPanel = true");
+                //Console.WriteLine("showLoginPanel = true");
 
                 // LEGGI E IMPOSTA isStaffLogin
                 if (queryParams.TryGetValue("forStaff", out StringValues forStaff))
                 {
                     var forStaffValue = forStaff.FirstOrDefault();
                     isStaffLogin = forStaffValue?.ToLower() == "true"; // Case-insensitive
-                    Console.WriteLine($"isStaffLogin = {isStaffLogin} (forStaff={forStaffValue})");
+                    //Console.WriteLine($"isStaffLogin = {isStaffLogin} (forStaff={forStaffValue})");
                 }
                 else
                 {
@@ -387,11 +392,13 @@
     private void ToggleChatDaCard()
     {
         chatAperta = !chatAperta;
+        StateHasChanged();
     }
 
     private void ToggleChatDaBanner()
     {
         chatAperta = !chatAperta;
+        StateHasChanged();
     }
 
     // Metodi login
@@ -473,4 +480,6 @@
             isLoggingIn = false;
         }
     }
+
+
 }

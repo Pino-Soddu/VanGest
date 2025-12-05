@@ -45,7 +45,14 @@
             return new Blob(byteArrays, { type: contentType });
         }
     </script>
-
+    <script>
+        function scrollChatToBottom() {
+            var chatBody = document.querySelector('.chat-body');
+            if (chatBody) {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        }
+    </script>
 </head>
 <body>
     <component type="typeof(App)" render-mode="ServerPrerendered" />

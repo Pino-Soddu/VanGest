@@ -16,5 +16,5 @@ public interface IDeepSeekService
     Task InviaRichiestaFiltro(string query);
     Task<DeepSeekResponse> AnalyzeRequestAsync(string request, ContestoApplicativo contesto);
     Task<string> GetNoResultsSuggestionAsync(VanFilter filter);
-    
+    Task<RispostaUnificata> GetRispostaUnificataAsync(string userMessage, ContestoApplicativo contesto);
 }
