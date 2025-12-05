@@ -1,4 +1,5 @@
 ﻿@namespace VanGest.Server.Components.Chat
+@using Microsoft.AspNetCore.Components
 @using VanGest.Server.Services
 @using VanGest.Server.Services.Vans
 @using VanGest.Server.Models
@@ -6,13 +7,13 @@
 @using VanGest.Enums
 @inject IDeepSeekService DeepSeekService
 @inject IHttpClientFactory httpClientFactory
+@inject IJSRuntime JSRuntime
 @inject ILogger<ChatComponent> logger
 @inject IContextService ContextService
 @inject IVanService VanService
 @implements IDisposable
 
 @* ======================================================= *@
-@* OVERLAY CHAT - STILE CNP                                 *@
 @* Mantiene TUTTA la logica originale di VanGest           *@
 @* ======================================================= *@
 
@@ -39,30 +40,17 @@
                     <div class="message @(msg.IsUserMessage ? "user-message" : "ai-message")">
                         @if (msg.IsUserMessage)
                         {
-                            <div class="message-content">@msg.Content</div>
+                            <div class="message-content">
+                                @msg.Content
+                            </div>
                         }
                         else
                         {
                             <div class="ai-response">
                                 @if (!string.IsNullOrWhiteSpace(msg.Content))
                                 {
-                                    var lines = msg.Content.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
                                     <div class="message-content">
-                                        @foreach (var line in lines)
-                                        {
-                                            if (line.StartsWith("•"))
-                                            {
-                                                <div class="suggestion-item">
-                                                    <span class="suggestion-bullet">•</span>
-                                                    @line.Substring(1).Trim()
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <div class="message-text">@line</div>
-                                            }
-                                        }
+                                        @msg.Content
                                     </div>
                                 }
 
@@ -79,12 +67,14 @@
             <!-- FOOTER - Input originale -->
             <div class="chat-footer">
                 <div class="chat-input-container">
-                    <input @bind="userInput"
-                           @bind:event="oninput"
-                           @onkeypress="HandleKeyPress"
-                           placeholder="Scrivi la tua richiesta..."
-                           disabled="@isLoading"
-                           class="chat-input" />
+                    <textarea @ref="chatInputRef"
+                              @bind="userInput"
+                              @bind:event="oninput"
+                              @onkeydown="@(async e => await HandleEnterKey(e))"
+                              placeholder="Scrivi la tua richiesta..."
+                              disabled="@isLoading"
+                              class="chat-input"
+                              rows="1"></textarea>
                     <button @onclick="SendRequest"
                             disabled="@isLoading"
                             class="chat-send-btn">
@@ -118,6 +108,7 @@
     private bool isLoading = false;
     private List<ChatMessage> conversation = new();
     private bool _isDisposed;
+    private ElementReference chatInputRef;
     [Parameter] public bool IsStaffMode { get; set; }
 
     // Metodo per chiudere la chat
@@ -152,11 +143,48 @@
         }
     }
 
-    private async Task HandleKeyPress(KeyboardEventArgs e)
+    private async Task HandleEnterKey(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !isLoading)
+        // Se preme Enter SENZA Shift e non sta caricando
+        if (e.Key == "Enter" && !e.ShiftKey && !isLoading)
         {
-            await SendRequest();
+            // Se c'è testo, invia
+            if (!string.IsNullOrWhiteSpace(userInput))
+            {
+                await SendRequest();
+
+                // Rimetti il focus dopo 100ms
+                await Task.Delay(100);
+                await chatInputRef.FocusAsync();
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        // Aggiungi messaggio di benvenuto solo quando:
+        // 1. La chat è visibile (IsVisible = true)
+        // 2. La conversazione è vuota (prima apertura)
+        // 3. Non siamo in modalità Staff
+        if (IsVisible && conversation.Count == 0 && !IsStaffMode)
+        {
+            conversation.Add(new ChatMessage
+            {
+                Content = "Buongiorno! Sono l'Assistente Virtuale di Partner Sat, specializzato nel noleggio furgoni.\nPosso aiutarti a:\n✅ Capire quale furgone fa per te (dimensioni, tipo di utilizzo)\n✅ Darti tutte le informazioni su documenti, assicurazioni e condizioni\n✅ Mostrarti la disponibilità in tempo reale\n✅ Creare un preventivo personalizzato\n\nCome posso aiutarti oggi?",
+                IsUserMessage = false
+            });
+
+            // Forza aggiornamento UI
+            await InvokeAsync(StateHasChanged);
+
+            // Metti il focus sull'input dopo che la chat è visibile
+            await Task.Delay(300); // Aspetta che l'animazione finisca
+            if (IsVisible)
+            {
+                await chatInputRef.FocusAsync();
+            }
         }
     }
 
@@ -165,49 +193,134 @@
         if (string.IsNullOrWhiteSpace(userInput) || isLoading)
             return;
 
-        // Azzera la conversazione prima di ogni nuova richiesta
-        conversation.Clear();
+        // Salva l'input prima di cancellarlo
+        var request = userInput.Trim();
 
         isLoading = true;
+
+        // 1. Aggiungi messaggio utente alla conversazione
         conversation.Add(new ChatMessage
         {
-            Content = userInput,
+            Content = request,
             IsUserMessage = true
         });
 
-        var request = userInput;
+        // 2. Pulisci l'input (ma mantieni il focus)
         userInput = "";
+
+        // 3. Aggiorna UI
+        await InvokeAsync(StateHasChanged);
+        await ScrollToBottom();
 
         try
         {
-            var contesto = ContextService?.ContestoAttuale ?? ContestoApplicativo.Prenotazione;
-            var result = await DeepSeekService.AnalyzeRequestAsync(request, contesto);
+            var contesto = ContextService?.ContestoAttuale ?? ContestoApplicativo.ClientiInfo;
 
-            List<Van> vans = new();
-            if (result.Filters is VanFilter filter)
+            // =====================================================
+            // AREA CLIENTI (ClientiInfo E ClientiPrenotazione)
+            // =====================================================
+            if (contesto == ContestoApplicativo.ClientiInfo || contesto == ContestoApplicativo.ClientiPrenotazione)
             {
-                vans = await VanService.GetVansAsync(filter);
-                vans = await VanService.GetVansAsync(filter);
+                // 1. Ottieni risposta unificata
+                var risposta = await DeepSeekService.GetRispostaUnificataAsync(request, contesto);
 
-                if (vans.Any())
+                // 2. Pulisci eventuali asterischi dal testo
+                var testoPulito = risposta.RispostaTesto?.Replace("**", "") ?? string.Empty;
+
+                // 3. Gestisci transizione se DeepSeek la richiede
+                if (risposta.Tipo?.ToLower() == "ricerca" && contesto == ContestoApplicativo.ClientiInfo)
                 {
-                    conversation.Add(new ChatMessage
+                    // Cambia contesto per le prossime richieste
+                    if (ContextService != null)
                     {
-                        Content = result.Answer,
-                        IsUserMessage = false,
-                        Vans = contesto == ContestoApplicativo.Prenotazione ? vans : null,
-                        ARVans = null
-                    });
+                        ContextService.ContestoAttuale = ContestoApplicativo.ClientiPrenotazione;
+                    }
+
+                    // Aggiungi nota sulla transizione
+                    testoPulito += "\n\n✅ *Passo alla ricerca disponibilità...*";
                 }
-                else
+
+                // 4. Gestisci transizione inversa (prenota → info)
+                if (risposta.Tipo?.ToLower() == "info" && contesto == ContestoApplicativo.ClientiPrenotazione)
                 {
-                    var suggestion = await DeepSeekService.GetNoResultsSuggestionAsync(filter);
-                    conversation.Add(new ChatMessage
+                    // Torna a ClientiInfo
+                    if (ContextService != null)
                     {
-                        Content = suggestion,
-                        IsUserMessage = false,
-                        Vans = null
-                    });
+                        ContextService.ContestoAttuale = ContestoApplicativo.ClientiInfo;
+                    }
+
+                    // Aggiungi nota sulla transizione
+                    testoPulito += "\n\nℹ️ *Torno alle informazioni generali*";
+                }
+
+                // 5. Cerca nel database SOLO se:
+                //    - È una ricerca
+                //    - E ci sono filtri validi
+                List<Van> vans = new();
+                if (risposta.Tipo?.ToLower() == "ricerca" &&
+                    risposta.Filtri != null &&
+                    risposta.Filtri.HasFilters())
+                {
+                    vans = await VanService.GetVansAsync(risposta.Filtri);
+
+                    if (vans.Any())
+                    {
+                        var count = vans.Count;
+                        var brands = vans.GroupBy(v => v.Marca)
+                                        .Select(g => $"{g.Count()} {g.Key}")
+                                        .ToList();
+
+                        testoPulito += $"\n\n✅ **Ho trovato {count} furgoni disponibili!**";
+                        testoPulito += $"\n📊 *Distribuzione per marca:* {string.Join(", ", brands)}";
+                    }
+                    else
+                    {
+                        testoPulito += "\n\n⚠️ **Nessun furgone disponibile con questi criteri.**";
+                    }
+                }
+                // Se non è ricerca o non ci sono filtri, NON cercare nel database
+
+                // 6. Aggiungi alla conversazione
+                conversation.Add(new ChatMessage
+                {
+                    Content = testoPulito,
+                    IsUserMessage = false,
+                    Vans = vans.Any() ? vans : null
+                });
+            }
+            // =====================================================
+            // AREA STAFF (rimane invariato)
+            // =====================================================
+            else
+            {
+                // Mantieni logica staff esistente
+                var result = await DeepSeekService.AnalyzeRequestAsync(request, contesto);
+                List<Van> vans = new();
+
+                if (result.Filters is VanFilter filter)
+                {
+                    vans = await VanService.GetVansAsync(filter);
+
+                    if (vans.Any())
+                    {
+                        conversation.Add(new ChatMessage
+                        {
+                            Content = result.Answer,
+                            IsUserMessage = false,
+                            Vans = contesto == ContestoApplicativo.ClientiPrenotazione ? vans : null,
+                            ARVans = null
+                        });
+                    }
+                    else
+                    {
+                        var suggestion = await DeepSeekService.GetNoResultsSuggestionAsync(filter);
+                        conversation.Add(new ChatMessage
+                        {
+                            Content = suggestion,
+                            IsUserMessage = false,
+                            Vans = null
+                        });
+                    }
                 }
             }
         }
@@ -216,14 +329,22 @@
             logger.LogError(ex, "Errore durante l'elaborazione");
             conversation.Add(new ChatMessage
             {
-                Content = "Errore durante l'elaborazione",
+                Content = "Errore durante l'elaborazione. Riprova più tardi.",
                 IsUserMessage = false
             });
         }
         finally
         {
             isLoading = false;
+            await InvokeAsync(StateHasChanged);
+            await ScrollToBottom();
         }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await Task.Delay(50); // Aspetta che l'UI si aggiorni
+        await JSRuntime.InvokeVoidAsync("scrollChatToBottom");
     }
 
     private string BuildQueryString(object? filters)

@@ -2,9 +2,10 @@
 {
     public enum ContestoApplicativo
     {
-        Prenotazione,
-        StaffFiltri,
-        StaffLocalita
+        ClientiInfo,          // Solo conversazione generica
+        ClientiPrenotazione,  // Conversazione + Database (ricerche)
+        StaffFiltri,          // Area riservata staff
+        StaffLocalita         // Area riservata staff (località)
     }
 
     public enum OnlineStatus

@@ -17,13 +17,13 @@
 
     protected override void OnInitialized()
     {
-        Console.WriteLine("[2] ModalContainer inizializzato!"); // Debug
+        //Console.WriteLine("[2] ModalContainer inizializzato!"); // Debug
         ModalService.OnShow += HandleShowModal;
     }
 
     private void HandleShowModal(string title, RenderFragment content, ModalService.ModalOptions options)
     {
-        Console.WriteLine("[3] Evento OnShow ricevuto!"); // Debug
+        //Console.WriteLine("[3] Evento OnShow ricevuto!"); // Debug
         Title = title;
         Content = content;
         Options = options;
